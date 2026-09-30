@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chrome T-Rex Dinosaur Game</title>
+<title>Classic Snake Game</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   body {
-    background-color: #f7f7f7;
-    color: #535353;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
     font-family: 'Courier New', Courier, monospace;
     display: flex;
     flex-direction: column;
@@ -17,63 +17,69 @@
     min-height: 100vh;
     overflow: hidden;
     outline: none;
-    transition: background-color 0.8s, color 0.8s;
-  }
-  body.dark {
-    background-color: #202124;
-    color: #e8eaed;
   }
   #game-wrapper {
     position: relative;
-    width: 100%;
-    max-width: 800px;
-    padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 10px;
     outline: none;
   }
-  canvas {
-    background: transparent;
+  .header-bar {
     width: 100%;
-    height: auto;
-    display: block;
-    image-rendering: pixelated;
-    outline: none;
-  }
-  .controls-bar {
+    max-width: 400px;
     display: flex;
     justify-content: space-between;
-    width: 100%;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #00ff88;
+  }
+  canvas {
+    background-color: #0f1410;
+    border: 3px solid #00ff88;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+    display: block;
+    outline: none;
+  }
+  .hint-text {
     margin-top: 10px;
     font-size: 13px;
-    font-weight: bold;
+    color: #888;
   }
-  .touch-controls {
+  /* Phím điều hướng cho điện thoại */
+  .d-pad {
     display: none;
-    margin-top: 15px;
-    gap: 20px;
-    width: 100%;
-    justify-content: center;
+    margin-top: 14px;
+    width: 180px;
+    height: 140px;
+    position: relative;
   }
-  .touch-btn {
-    flex: 1;
-    max-width: 160px;
-    padding: 12px 0;
-    font-size: 15px;
+  .d-btn {
+    position: absolute;
+    width: 52px;
+    height: 44px;
+    background: #2a2a2a;
+    color: #00ff88;
+    border: 2px solid #00ff88;
+    border-radius: 6px;
+    font-size: 18px;
     font-weight: bold;
-    font-family: inherit;
-    background: #e0e0e0;
-    color: #333;
-    border: 2px solid #535353;
-    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     touch-action: manipulation;
   }
-  .touch-btn:active { background: #bbb; }
-  body.dark .touch-btn { background: #3c4043; color: #fff; border-color: #888; }
-  body.dark .touch-btn:active { background: #555; }
+  .d-btn:active { background: #00ff88; color: #1a1a1a; }
+  #btn-up { top: 0; left: 64px; }
+  #btn-left { top: 48px; left: 8px; }
+  #btn-right { top: 48px; left: 120px; }
+  #btn-down { bottom: 0; left: 64px; }
+
   @media (pointer: coarse), (max-width: 768px) {
-    .touch-controls { display: flex; }
+    .d-pad { display: block; }
     .hint-text { display: none; }
   }
 </style>
@@ -81,480 +87,309 @@
 <body tabindex="0">
 
 <div id="game-wrapper" tabindex="0">
-  <canvas id="gameCanvas" width="800" height="240" tabindex="0"></canvas>
-  <div class="controls-bar">
-    <span class="hint-text">Dùng phím mũi tên: <b>↑</b> để Nhảy | <b>↓</b> để Cúi</span>
-    <span id="sound-btn" style="cursor: pointer;">🔊 Âm thanh: BẬT</span>
+  <div class="header-bar">
+    <span id="score-text">ĐIỂM: 0</span>
+    <span id="hi-text">KỶ LỤC: 0</span>
   </div>
-  <div class="touch-controls">
-    <button class="touch-btn" id="btn-duck">CÚI (↓)</button>
-    <button class="touch-btn" id="btn-jump">NHẢY (↑)</button>
+  
+  <canvas id="gameCanvas" width="400" height="400" tabindex="0"></canvas>
+  
+  <div class="hint-text">
+    Dùng <b>4 phím Mũi Tên</b> hoặc <b>W, A, S, D</b> để di chuyển
+  </div>
+
+  <div class="d-pad">
+    <button class="d-btn" id="btn-up">↑</button>
+    <button class="d-btn" id="btn-left">←</button>
+    <button class="d-btn" id="btn-right">→</button>
+    <button class="d-btn" id="btn-down">↓</button>
   </div>
 </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const soundBtn = document.getElementById('sound-btn');
-const btnJump = document.getElementById('btn-jump');
-const btnDuck = document.getElementById('btn-duck');
+const scoreText = document.getElementById('score-text');
+const hiText = document.getElementById('hi-text');
 
-// Tự động nhận diện bàn phím ngay khi load
-window.addEventListener('load', () => {
-  window.focus();
-  document.body.focus();
-});
-window.addEventListener('mouseenter', () => {
-  window.focus();
-});
-document.addEventListener('click', () => {
-  window.focus();
-});
+// Tự động nhận diện bàn phím ngay lập tức
+window.addEventListener('load', () => { window.focus(); document.body.focus(); });
+window.addEventListener('mouseenter', () => window.focus());
+document.addEventListener('click', () => window.focus());
 
-let soundEnabled = true;
-soundBtn.addEventListener('click', () => {
-  soundEnabled = !soundEnabled;
-  soundBtn.textContent = soundEnabled ? '🔊 Âm thanh: BẬT' : '🔈 Âm thanh: TẮT';
-});
-
-// Âm thanh 8-bit
+// Âm thanh 8-bit Web Audio
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function initAudio() {
   if (!audioCtx) audioCtx = new AudioContext();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
-function playBeep(freq, type, duration, delay = 0) {
-  if (!soundEnabled) return;
-  initAudio();
+function playTone(freq, type, duration) {
   try {
+    initAudio();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.start(audioCtx.currentTime + delay);
-    osc.stop(audioCtx.currentTime + delay + duration);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
   } catch (e) {}
 }
 
-const GROUND_Y = 195;
-let speed = 6;
+// Cấu hình trò chơi
+const GRID_SIZE = 20; // 20x20 ô (mỗi ô 20px)
+const CELL_COUNT = canvas.width / GRID_SIZE;
+
+let snake = [];
+let dir = { x: 1, y: 0 };
+let nextDir = { x: 1, y: 0 };
+let food = { x: 15, y: 10 };
+let bonusFood = null;
+let bonusTimer = 0;
 let score = 0;
-let highScore = localStorage.getItem('dino_hi') || 0;
+let highScore = localStorage.getItem('snake_hi') || 0;
 let isGameOver = false;
 let isStarted = false;
-let frameCount = 0;
-let nightMode = false;
+let gameSpeed = 120; // ms mỗi frame bước đi
+let lastUpdateTime = 0;
 
-// Ma trận pixel khủng long T-Rex
-const DINO_RUN_1 = [
-  "............xxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xx2xxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxx..",
-  "............xxxxxxxxx.",
-  "x...........xxxxxx....",
-  "xx.........xxxxxxx....",
-  "xxx.......xxxxxxxxx...",
-  "xxxx.....xxxxxxxxxxxx.",
-  "xxxxx...xxxxxxxxxxxx..",
-  "xxxxxxxxxxxxxxxxxx....",
-  ".xxxxxxxxxxxxxxxx.....",
-  "..xxxxxxxxxxxxxx......",
-  "...xxxxxxxxxxxx.......",
-  "....xxxxxxxxxx........",
-  ".....xxxxxxxxx........",
-  "......xxxxxx..........",
-  ".......x...x..........",
-  ".......xx..xx.........",
-  ".......xx.............",
-  ".......x.............."
-];
+hiText.textContent = `KỶ LỤC: ${highScore}`;
 
-const DINO_RUN_2 = [
-  "............xxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xx2xxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxx..",
-  "............xxxxxxxxx.",
-  "x...........xxxxxx....",
-  "xx.........xxxxxxx....",
-  "xxx.......xxxxxxxxx...",
-  "xxxx.....xxxxxxxxxxxx.",
-  "xxxxx...xxxxxxxxxxxx..",
-  "xxxxxxxxxxxxxxxxxx....",
-  ".xxxxxxxxxxxxxxxx.....",
-  "..xxxxxxxxxxxxxx......",
-  "...xxxxxxxxxxxx.......",
-  "....xxxxxxxxxx........",
-  ".....xxxxxxxxx........",
-  "......xxxxxx..........",
-  ".......x...x..........",
-  "......xx...x..........",
-  "...........xx.........",
-  "............x........."
-];
+function resetGame() {
+  snake = [
+    { x: 5, y: 10 },
+    { x: 4, y: 10 },
+    { x: 3, y: 10 }
+  ];
+  dir = { x: 1, y: 0 };
+  nextDir = { x: 1, y: 0 };
+  score = 0;
+  gameSpeed = 120;
+  isGameOver = false;
+  isStarted = true;
+  bonusFood = null;
+  scoreText.textContent = `ĐIỂM: ${score}`;
+  spawnFood();
+}
 
-const DINO_DEAD = [
-  "............xxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xx.xxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxxxx",
-  "............xxxxxxxx..",
-  "............xxxxxxxxx.",
-  "x...........xxxxxx....",
-  "xx.........xxxxxxx....",
-  "xxx.......xxxxxxxxx...",
-  "xxxx.....xxxxxxxxxxxx.",
-  "xxxxx...xxxxxxxxxxxx..",
-  "xxxxxxxxxxxxxxxxxx....",
-  ".xxxxxxxxxxxxxxxx.....",
-  "..xxxxxxxxxxxxxx......",
-  "...xxxxxxxxxxxx.......",
-  "....xxxxxxxxxx........",
-  ".....xxxxxxxxx........",
-  "......xxxxxx..........",
-  ".......x...x..........",
-  ".......xx..xx.........",
-  ".......xx..xx.........",
-  ".......x....x........."
-];
+function spawnFood() {
+  let valid = false;
+  while (!valid) {
+    food = {
+      x: Math.floor(Math.random() * CELL_COUNT),
+      y: Math.floor(Math.random() * CELL_COUNT)
+    };
+    valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+  }
 
-const DINO_DUCK_1 = [
-  "...................xxxxxxxxxxxx",
-  "...................xxxxxxxxxxxxx",
-  "...................xx2xxxxxxxxxx",
-  "...................xxxxxxxxxxxxx",
-  "xxxx...............xxxxxxxxxxxxx",
-  "xxxxxx............xxxxxxxxxxx...",
-  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
-  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
-  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
-  "...xxxxxxxxxxxxxxxxxxx..........",
-  "....xxxxxxxxxxxxxxxxx...........",
-  ".....xxxxxx....xxxxxx...........",
-  "......x...x.....x...x...........",
-  "......xx..x.....xx..x...........",
-  "......xx............x..........."
-];
-
-const DINO_DUCK_2 = [
-  "...................xxxxxxxxxxxx",
-  "...................xxxxxxxxxxxxx",
-  "...................xx2xxxxxxxxxx",
-  "...................xxxxxxxxxxxxx",
-  "xxxx...............xxxxxxxxxxxxx",
-  "xxxxxx............xxxxxxxxxxx...",
-  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
-  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
-  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
-  "...xxxxxxxxxxxxxxxxxxx..........",
-  "....xxxxxxxxxxxxxxxxx...........",
-  ".....xxxxxx....xxxxxx...........",
-  "......x...x.....x...x...........",
-  "......x...xx....x...xx..........",
-  "..........xx........x..........."
-];
-
-const CACTUS_SPRITE = [
-  "..xx....xx..",
-  "..xx....xx..",
-  "..xx....xx..",
-  "xxxx....xxxx",
-  "xxxx....xxxx",
-  "xxxx....xxxx",
-  "xxxx....xxxx",
-  ".xxxxxxxxxx.",
-  "...xxxxxx...",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx....",
-  "....xxxx...."
-];
-
-function drawPixelMap(map, startX, startY, scale, color, bgCol) {
-  for (let r = 0; r < map.length; r++) {
-    const row = map[r];
-    for (let c = 0; c < row.length; c++) {
-      const char = row[c];
-      if (char === 'x') {
-        ctx.fillStyle = color;
-        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
-      } else if (char === '2') {
-        ctx.fillStyle = bgCol;
-        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
-      }
+  // 25% cơ hội xuất hiện mồi vàng thưởng lớn
+  if (!bonusFood && Math.random() < 0.25 && score > 30) {
+    let bValid = false;
+    let bPos;
+    while (!bValid) {
+      bPos = {
+        x: Math.floor(Math.random() * CELL_COUNT),
+        y: Math.floor(Math.random() * CELL_COUNT)
+      };
+      bValid = !snake.some(s => s.x === bPos.x && s.y === bPos.y) && (bPos.x !== food.x || bPos.y !== food.y);
     }
+    bonusFood = bPos;
+    bonusTimer = 45; // tồn tại trong 45 lượt đi
   }
 }
 
-const SCALE = 2.2;
-const DINO_HEIGHT = 23 * SCALE;
-const DINO_WIDTH = 21 * SCALE;
-const DUCK_HEIGHT = 15 * SCALE;
-
-const dino = {
-  x: 50,
-  y: GROUND_Y - DINO_HEIGHT,
-  dy: 0,
-  gravity: 0.65,
-  jumpPower: -11.5,
-  isGrounded: true,
-  isDucking: false,
-  legState: 0
-};
-
-let obstacles = [];
-let clouds = [
-  { x: 300, y: 40, speed: 0.5 },
-  { x: 620, y: 70, speed: 0.4 }
-];
-let groundOffset = 0;
-
-function jump() {
+// Điều khiển phím
+function changeDirection(dx, dy) {
   initAudio();
-  if (isGameOver) { resetGame(); return; }
-  if (!isStarted) { isStarted = true; return; }
-  if (dino.isGrounded && !dino.isDucking) {
-    dino.dy = dino.jumpPower;
-    dino.isGrounded = false;
-    playBeep(440, 'square', 0.09);
+  if (!isStarted || isGameOver) {
+    resetGame();
+    return;
+  }
+  // Không cho phép quay đầu 180 độ
+  if (dx !== -dir.x && dy !== -dir.y) {
+    nextDir = { x: dx, y: dy };
   }
 }
 
-function setDuck(val) {
-  if (!isStarted || isGameOver) return;
-  dino.isDucking = val;
-  if (val && !dino.isGrounded) {
-    dino.dy += 4; // Rơi xuống nhanh hơn khi đang nhảy mà bấm cúi
-  }
-}
-
-// Bắt phím bàn phím: Mũi tên Lên / Mũi tên Xuống / Space
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowUp' || e.code === 'ArrowUp' || e.code === 'Space') {
-    e.preventDefault();
-    jump();
-  } else if (e.key === 'ArrowDown' || e.code === 'ArrowDown') {
-    e.preventDefault();
-    setDuck(true);
-  }
+  if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); changeDirection(0, -1); }
+  else if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); changeDirection(0, 1); }
+  else if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); changeDirection(-1, 0); }
+  else if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); changeDirection(1, 0); }
+  else if (e.code === 'Space' && (!isStarted || isGameOver)) { e.preventDefault(); resetGame(); }
 }, { passive: false });
 
-window.addEventListener('keyup', (e) => {
-  if (e.key === 'ArrowDown' || e.code === 'ArrowDown') {
-    e.preventDefault();
-    setDuck(false);
-  }
-}, { passive: false });
-
-// Hỗ trợ cảm ứng trên điện thoại
-btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
-btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setDuck(true); });
-btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setDuck(false); });
-
-function spawnObstacle() {
-  const minGap = 200 + speed * 14;
-  const lastObs = obstacles[obstacles.length - 1];
-  if (lastObs && canvas.width - lastObs.x < minGap) return;
-
-  const rand = Math.random();
-  if (score > 250 && rand < 0.3) {
-    const flightHeights = [GROUND_Y - 25, GROUND_Y - 50, GROUND_Y - 70];
-    obstacles.push({
-      type: 'bird',
-      x: canvas.width,
-      y: flightHeights[Math.floor(Math.random() * flightHeights.length)],
-      w: 36,
-      h: 24,
-      flap: 0
-    });
-  } else {
-    obstacles.push({
-      type: 'cactus',
-      x: canvas.width,
-      y: GROUND_Y - (19 * SCALE),
-      w: 12 * SCALE,
-      h: 19 * SCALE
-    });
-  }
-}
+// Nút bấm trên điện thoại
+document.getElementById('btn-up').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, -1); });
+document.getElementById('btn-down').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, 1); });
+document.getElementById('btn-left').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(-1, 0); });
+document.getElementById('btn-right').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(1, 0); });
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (!isStarted || isGameOver) resetGame();
+});
 
 function update() {
   if (!isStarted || isGameOver) return;
-  frameCount++;
 
-  dino.dy += dino.gravity;
-  dino.y += dino.dy;
+  dir = nextDir;
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-  const curH = dino.isDucking ? DUCK_HEIGHT : DINO_HEIGHT;
-
-  if (dino.y >= GROUND_Y - curH) {
-    dino.y = GROUND_Y - curH;
-    dino.dy = 0;
-    dino.isGrounded = true;
+  // Đâm vào tường
+  if (head.x < 0 || head.x >= CELL_COUNT || head.y < 0 || head.y >= CELL_COUNT) {
+    triggerGameOver();
+    return;
   }
 
-  if (frameCount % 6 === 0) {
-    dino.legState = 1 - dino.legState;
+  // Tự cắn vào thân
+  if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+    triggerGameOver();
+    return;
   }
 
-  if (frameCount % 4 === 0) {
-    score++;
-    if (score % 100 === 0) {
-      playBeep(880, 'square', 0.08);
-      setTimeout(() => playBeep(1100, 'square', 0.12), 90);
-    }
-    if (score % 400 === 0) {
-      nightMode = !nightMode;
-      document.body.classList.toggle('dark', nightMode);
-    }
+  snake.unshift(head);
+
+  // Ăn mồi thường
+  if (head.x === food.x && head.y === food.y) {
+    score += 10;
+    scoreText.textContent = `ĐIỂM: ${score}`;
+    playTone(600, 'square', 0.08);
+    // Tăng tốc dần theo điểm
+    if (gameSpeed > 60) gameSpeed -= 1.5;
+    spawnFood();
+  } else if (bonusFood && head.x === bonusFood.x && head.y === bonusFood.y) {
+    // Ăn mồi vàng
+    score += 35;
+    scoreText.textContent = `ĐIỂM: ${score}`;
+    playTone(900, 'square', 0.15);
+    bonusFood = null;
+  } else {
+    snake.pop(); // Di chuyển bình thường
   }
-  speed = 6 + Math.min(score * 0.005, 8.5);
 
-  groundOffset = (groundOffset + speed) % 24;
-  clouds.forEach(c => {
-    c.x -= c.speed;
-    if (c.x < -60) { c.x = canvas.width + 40; c.y = 25 + Math.random() * 50; }
-  });
-
-  if (Math.random() < 0.035) spawnObstacle();
-
-  for (let i = obstacles.length - 1; i >= 0; i--) {
-    const ob = obstacles[i];
-    ob.x -= speed;
-    if (ob.type === 'bird' && frameCount % 12 === 0) {
-      ob.flap = 1 - ob.flap;
-    }
-
-    const curW = dino.isDucking ? 32 * SCALE : DINO_WIDTH;
-    const dHitBox = { x: dino.x + 8, y: dino.y + 4, w: curW - 14, h: curH - 6 };
-    const oHitBox = { x: ob.x + 4, y: ob.y + 4, w: ob.w - 8, h: ob.h - 6 };
-
-    if (
-      dHitBox.x < oHitBox.x + oHitBox.w &&
-      dHitBox.x + dHitBox.w > oHitBox.x &&
-      dHitBox.y < oHitBox.y + oHitBox.h &&
-      dHitBox.y + dHitBox.h > oHitBox.y
-    ) {
-      gameOver();
-    }
-
-    if (ob.x + ob.w < -10) obstacles.splice(i, 1);
+  // Giảm thời gian tồn tại của mồi vàng
+  if (bonusFood) {
+    bonusTimer--;
+    if (bonusTimer <= 0) bonusFood = null;
   }
 }
 
-function gameOver() {
+function triggerGameOver() {
   isGameOver = true;
-  playBeep(180, 'sawtooth', 0.25);
+  playTone(160, 'sawtooth', 0.35);
   if (score > highScore) {
     highScore = score;
-    localStorage.setItem('dino_hi', highScore);
+    localStorage.setItem('snake_hi', highScore);
+    hiText.textContent = `KỶ LỤC: ${highScore}`;
   }
-}
-
-function resetGame() {
-  obstacles = [];
-  score = 0;
-  speed = 6;
-  isGameOver = false;
-  frameCount = 0;
-  dino.y = GROUND_Y - DINO_HEIGHT;
-  dino.dy = 0;
-  dino.isGrounded = true;
-  dino.isDucking = false;
-  nightMode = false;
-  document.body.classList.remove('dark');
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const color = nightMode ? '#e8eaed' : '#535353';
-  const bgCol = nightMode ? '#202124' : '#f7f7f7';
 
-  // Mây
-  ctx.fillStyle = color;
-  clouds.forEach(c => {
-    ctx.fillRect(c.x, c.y, 44, 10);
-    ctx.fillRect(c.x + 12, c.y - 6, 22, 6);
-  });
-
-  // Mặt đất
-  ctx.fillRect(0, GROUND_Y, canvas.width, 2);
-  for (let x = -groundOffset; x < canvas.width; x += 24) {
-    if ((x * 7) % 5 === 0) ctx.fillRect(x + 2, GROUND_Y + 4, 3, 2);
-    if ((x * 11) % 7 === 0) ctx.fillRect(x + 10, GROUND_Y + 8, 4, 2);
+  // 1. Lưới nền mờ
+  ctx.strokeStyle = '#141e17';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= canvas.width; i += GRID_SIZE) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
   }
 
-  // Khủng long
-  if (isGameOver) {
-    drawPixelMap(DINO_DEAD, dino.x, dino.y, SCALE, color, bgCol);
-  } else if (dino.isDucking) {
-    drawPixelMap(dino.legState === 0 ? DINO_DUCK_1 : DINO_DUCK_2, dino.x, dino.y, SCALE, color, bgCol);
-  } else if (!dino.isGrounded) {
-    drawPixelMap(DINO_RUN_1, dino.x, dino.y, SCALE, color, bgCol);
-  } else {
-    drawPixelMap(dino.legState === 0 ? DINO_RUN_1 : DINO_RUN_2, dino.x, dino.y, SCALE, color, bgCol);
+  // 2. Mồi thường (Quả đỏ tròn có cuống)
+  ctx.fillStyle = '#ff4757';
+  ctx.beginPath();
+  ctx.arc(food.x * GRID_SIZE + 10, food.y * GRID_SIZE + 10, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // Cuống mồi
+  ctx.fillStyle = '#2ed573';
+  ctx.fillRect(food.x * GRID_SIZE + 9, food.y * GRID_SIZE + 2, 2, 4);
+
+  // 3. Mồi vàng đặc biệt (Nhấp nháy khi sắp hết giờ)
+  if (bonusFood) {
+    if (bonusTimer > 15 || Math.floor(bonusTimer / 2) % 2 === 0) {
+      ctx.fillStyle = '#ffa502';
+      ctx.beginPath();
+      ctx.arc(bonusFood.x * GRID_SIZE + 10, bonusFood.y * GRID_SIZE + 10, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', bonusFood.x * GRID_SIZE + 10, bonusFood.y * GRID_SIZE + 14);
+    }
   }
 
-  // Chướng ngại vật
-  obstacles.forEach(ob => {
-    if (ob.type === 'cactus') {
-      drawPixelMap(CACTUS_SPRITE, ob.x, ob.y, SCALE, color, bgCol);
-    } else if (ob.type === 'bird') {
-      ctx.fillStyle = color;
-      ctx.fillRect(ob.x + 6, ob.y + 8, 24, 8);
-      ctx.fillRect(ob.x, ob.y + 10, 8, 6);
-      if (ob.flap === 0) {
-        ctx.fillRect(ob.x + 12, ob.y - 2, 8, 10);
-      } else {
-        ctx.fillRect(ob.x + 12, ob.y + 14, 8, 10);
+  // 4. Thân rắn
+  snake.forEach((segment, idx) => {
+    if (idx === 0) {
+      // Đầu rắn
+      ctx.fillStyle = '#00ff88';
+      ctx.fillRect(segment.x * GRID_SIZE + 1, segment.y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+      // Mắt rắn
+      ctx.fillStyle = '#111';
+      const eyeOffset = 4;
+      if (dir.x === 1) { // Sang phải
+        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 4, 3, 3);
+        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 13, 3, 3);
+      } else if (dir.x === -1) { // Sang trái
+        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 4, 3, 3);
+        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 13, 3, 3);
+      } else if (dir.y === -1) { // Lên trên
+        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 5, 3, 3);
+        ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 5, 3, 3);
+      } else { // Xuống dưới
+        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 12, 3, 3);
+        ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 12, 3, 3);
       }
+    } else {
+      // Các đốt thân
+      ctx.fillStyle = idx % 2 === 0 ? '#10ac84' : '#1dd1a1';
+      ctx.fillRect(segment.x * GRID_SIZE + 2, segment.y * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
     }
   });
 
-  // Điểm số
-  ctx.fillStyle = color;
-  ctx.font = '16px "Courier New", Courier, monospace';
-  ctx.textAlign = 'right';
-  const scoreStr = String(score).padStart(5, '0');
-  const hiStr = String(highScore).padStart(5, '0');
-  ctx.fillText(`HI ${hiStr}  ${scoreStr}`, canvas.width - 15, 25);
-
+  // 5. Màn hình Bắt đầu / Thua cuộc
   if (!isStarted) {
-    ctx.textAlign = 'center';
-    ctx.fillText('BẤM PHÍM MŨI TÊN LÊN (↑) HOẶC PHÍM CÁCH ĐỂ BẮT ĐẦU', canvas.width / 2, GROUND_Y - 60);
-  } else if (isGameOver) {
-    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff88';
     ctx.font = 'bold 20px "Courier New", Courier, monospace';
-    ctx.fillText('G A M E   O V E R', canvas.width / 2, GROUND_Y - 70);
-    ctx.font = '14px "Courier New", Courier, monospace';
-    ctx.fillText('↺ Bấm Mũi Tên Lên (↑) hoặc Phím Cách để chơi lại', canvas.width / 2, GROUND_Y - 40);
+    ctx.textAlign = 'center';
+    ctx.fillText('RẮN SĂN MỒI', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.font = '13px "Courier New", Courier, monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Nhấn Phím Mũi Tên bất kỳ để Chơi', canvas.width / 2, canvas.height / 2 + 15);
+  } else if (isGameOver) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ff4757';
+    ctx.font = 'bold 24px "Courier New", Courier, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.font = '13px "Courier New", Courier, monospace';
+    ctx.fillStyle = '#00ff88';
+    ctx.fillText(`Tổng điểm: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('Nhấn Mũi Tên hoặc chạm để chơi lại', canvas.width / 2, canvas.height / 2 + 35);
   }
 }
 
-function loop() {
-  update();
+function gameLoop(currentTime) {
+  if (currentTime - lastUpdateTime >= gameSpeed) {
+    update();
+    lastUpdateTime = currentTime;
+  }
   draw();
-  requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 }
 
-loop();
+// Khởi tạo trạng thái ban đầu
+resetGame();
+isStarted = false; // Chờ người chơi bấm phím mới chạy
+requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
