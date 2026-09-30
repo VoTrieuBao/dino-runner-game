@@ -37,13 +37,12 @@
     height: auto;
     display: block;
     image-rendering: pixelated;
-    border-radius: 4px;
   }
   .controls-bar {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    margin-top: 12px;
+    margin-top: 10px;
     font-size: 13px;
     font-weight: bold;
   }
@@ -57,8 +56,8 @@
   .touch-btn {
     flex: 1;
     max-width: 160px;
-    padding: 14px 0;
-    font-size: 16px;
+    padding: 12px 0;
+    font-size: 15px;
     font-weight: bold;
     font-family: inherit;
     background: #e0e0e0;
@@ -67,17 +66,9 @@
     border-radius: 8px;
     touch-action: manipulation;
   }
-  .touch-btn:active {
-    background: #bbb;
-  }
-  body.dark .touch-btn {
-    background: #3c4043;
-    color: #fff;
-    border-color: #888;
-  }
-  body.dark .touch-btn:active {
-    background: #555;
-  }
+  .touch-btn:active { background: #bbb; }
+  body.dark .touch-btn { background: #3c4043; color: #fff; border-color: #888; }
+  body.dark .touch-btn:active { background: #555; }
   @media (pointer: coarse), (max-width: 768px) {
     .touch-controls { display: flex; }
     .hint-text { display: none; }
@@ -89,7 +80,7 @@
 <div id="game-wrapper">
   <canvas id="gameCanvas" width="800" height="240"></canvas>
   <div class="controls-bar">
-    <span class="hint-text">Nhấn <b>SPACE</b> hoặc <b>↑</b> để Nhảy | <b>↓</b> để Cúi</span>
+    <span class="hint-text">Nhấn <b>SPACE</b> / <b>↑</b>: Nhảy | <b>↓</b>: Cúi</span>
     <span id="sound-btn" style="cursor: pointer;">🔊 Âm thanh: BẬT</span>
   </div>
   <div class="touch-controls">
@@ -111,7 +102,7 @@ soundBtn.addEventListener('click', () => {
   soundBtn.textContent = soundEnabled ? '🔊 Âm thanh: BẬT' : '🔈 Âm thanh: TẮT';
 });
 
-// Web Audio API
+// Audio Web API
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function initAudio() {
@@ -135,7 +126,7 @@ function playBeep(freq, type, duration, delay = 0) {
   } catch (e) {}
 }
 
-const GROUND_Y = 200;
+const GROUND_Y = 195;
 let speed = 6;
 let score = 0;
 let highScore = localStorage.getItem('dino_hi') || 0;
@@ -144,11 +135,168 @@ let isStarted = false;
 let frameCount = 0;
 let nightMode = false;
 
+// Sprite Pixel Maps chuẩn của Google T-Rex
+// 1 = Pixel thân, 2 = Mắt trắng, 0 = trong suốt
+const DINO_RUN_1 = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx2xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  ".......xx..xx.........",
+  ".......xx.............",
+  ".......x.............."
+];
+
+const DINO_RUN_2 = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx2xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  "......xx...x..........",
+  "...........xx.........",
+  "............x........."
+];
+
+const DINO_DEAD = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx.xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  ".......xx..xx.........",
+  ".......xx..xx.........",
+  ".......x....x........."
+];
+
+const DINO_DUCK_1 = [
+  "...................xxxxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "...................xx2xxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "xxxx...............xxxxxxxxxxxxx",
+  "xxxxxx............xxxxxxxxxxx...",
+  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
+  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
+  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
+  "...xxxxxxxxxxxxxxxxxxx..........",
+  "....xxxxxxxxxxxxxxxxx...........",
+  ".....xxxxxx....xxxxxx...........",
+  "......x...x.....x...x...........",
+  "......xx..x.....xx..x...........",
+  "......xx............x..........."
+];
+
+const DINO_DUCK_2 = [
+  "...................xxxxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "...................xx2xxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "xxxx...............xxxxxxxxxxxxx",
+  "xxxxxx............xxxxxxxxxxx...",
+  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
+  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
+  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
+  "...xxxxxxxxxxxxxxxxxxx..........",
+  "....xxxxxxxxxxxxxxxxx...........",
+  ".....xxxxxx....xxxxxx...........",
+  "......x...x.....x...x...........",
+  "......x...xx....x...xx..........",
+  "..........xx........x..........."
+];
+
+const CACTUS_SPRITE = [
+  "..xx....xx..",
+  "..xx....xx..",
+  "..xx....xx..",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  ".xxxxxxxxxx.",
+  "...xxxxxx...",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx...."
+];
+
+function drawPixelMap(map, startX, startY, scale, color, bgCol) {
+  for (let r = 0; r < map.length; r++) {
+    const row = map[r];
+    for (let c = 0; c < row.length; c++) {
+      const char = row[c];
+      if (char === 'x') {
+        ctx.fillStyle = color;
+        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
+      } else if (char === '2') {
+        ctx.fillStyle = bgCol;
+        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
+      }
+    }
+  }
+}
+
+const SCALE = 2.2;
+const DINO_HEIGHT = 23 * SCALE;
+const DINO_WIDTH = 21 * SCALE;
+const DUCK_HEIGHT = 15 * SCALE;
+
 const dino = {
   x: 50,
-  y: GROUND_Y - 47,
-  w: 44,
-  h: 47,
+  y: GROUND_Y - DINO_HEIGHT,
   dy: 0,
   gravity: 0.65,
   jumpPower: -11.5,
@@ -159,8 +307,8 @@ const dino = {
 
 let obstacles = [];
 let clouds = [
-  { x: 300, y: 50, speed: 0.6 },
-  { x: 650, y: 75, speed: 0.5 }
+  { x: 300, y: 40, speed: 0.5 },
+  { x: 620, y: 70, speed: 0.4 }
 ];
 let groundOffset = 0;
 
@@ -171,7 +319,7 @@ function jump() {
   if (dino.isGrounded && !dino.isDucking) {
     dino.dy = dino.jumpPower;
     dino.isGrounded = false;
-    playBeep(440, 'square', 0.1);
+    playBeep(440, 'square', 0.09);
   }
 }
 
@@ -179,11 +327,10 @@ function setDuck(val) {
   if (!isStarted || isGameOver) return;
   dino.isDucking = val;
   if (val && !dino.isGrounded) {
-    dino.dy += 4; // Tăng tốc rơi
+    dino.dy += 4;
   }
 }
 
-// Bàn phím
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     e.preventDefault();
@@ -193,48 +340,38 @@ window.addEventListener('keydown', (e) => {
     setDuck(true);
   }
 });
-
 window.addEventListener('keyup', (e) => {
   if (e.code === 'ArrowDown') setDuck(false);
 });
 
-// Cảm ứng nút ảo & Canvas
 canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
 btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
 btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setDuck(true); });
 btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setDuck(false); });
 
 function spawnObstacle() {
-  const minGap = 200 + speed * 15;
+  const minGap = 200 + speed * 14;
   const lastObs = obstacles[obstacles.length - 1];
   if (lastObs && canvas.width - lastObs.x < minGap) return;
 
   const rand = Math.random();
-  if (score > 250 && rand < 0.28) {
-    // Chim Pterodactyl
-    const flightHeights = [GROUND_Y - 30, GROUND_Y - 55, GROUND_Y - 75];
+  if (score > 250 && rand < 0.3) {
+    const flightHeights = [GROUND_Y - 25, GROUND_Y - 50, GROUND_Y - 70];
     obstacles.push({
       type: 'bird',
       x: canvas.width,
       y: flightHeights[Math.floor(Math.random() * flightHeights.length)],
-      w: 42,
-      h: 30,
+      w: 36,
+      h: 24,
       flap: 0
     });
   } else {
-    // Xương rồng
-    const cTypes = [
-      { w: 18, h: 40, y: GROUND_Y - 40 },
-      { w: 34, h: 42, y: GROUND_Y - 42 },
-      { w: 24, h: 50, y: GROUND_Y - 50 }
-    ];
-    const picked = cTypes[Math.floor(Math.random() * cTypes.length)];
     obstacles.push({
       type: 'cactus',
       x: canvas.width,
-      y: picked.y,
-      w: picked.w,
-      h: picked.h
+      y: GROUND_Y - (19 * SCALE),
+      w: 12 * SCALE,
+      h: 19 * SCALE
     });
   }
 }
@@ -243,14 +380,13 @@ function update() {
   if (!isStarted || isGameOver) return;
   frameCount++;
 
-  // Vật lý khủng long
   dino.dy += dino.gravity;
   dino.y += dino.dy;
-  const currentHeight = dino.isDucking ? 30 : 47;
-  const currentWidth = dino.isDucking ? 59 : 44;
 
-  if (dino.y >= GROUND_Y - currentHeight) {
-    dino.y = GROUND_Y - currentHeight;
+  const curH = dino.isDucking ? DUCK_HEIGHT : DINO_HEIGHT;
+
+  if (dino.y >= GROUND_Y - curH) {
+    dino.y = GROUND_Y - curH;
     dino.dy = 0;
     dino.isGrounded = true;
   }
@@ -259,7 +395,6 @@ function update() {
     dino.legState = 1 - dino.legState;
   }
 
-  // Tăng điểm và tốc độ
   if (frameCount % 4 === 0) {
     score++;
     if (score % 100 === 0) {
@@ -271,16 +406,14 @@ function update() {
       document.body.classList.toggle('dark', nightMode);
     }
   }
-  speed = 6 + Math.min(score * 0.005, 9);
+  speed = 6 + Math.min(score * 0.005, 8.5);
 
-  // Cuộn mặt đất & Mây
   groundOffset = (groundOffset + speed) % 24;
   clouds.forEach(c => {
     c.x -= c.speed;
-    if (c.x < -60) { c.x = canvas.width + 40; c.y = 30 + Math.random() * 60; }
+    if (c.x < -60) { c.x = canvas.width + 40; c.y = 25 + Math.random() * 50; }
   });
 
-  // Chướng ngại vật
   if (Math.random() < 0.035) spawnObstacle();
 
   for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -290,19 +423,9 @@ function update() {
       ob.flap = 1 - ob.flap;
     }
 
-    // Kiểm tra va chạm (AABB thu hẹp vùng tiếp xúc)
-    const dHitBox = {
-      x: dino.x + 8,
-      y: dino.y + 4,
-      w: currentWidth - 14,
-      h: currentHeight - 6
-    };
-    const oHitBox = {
-      x: ob.x + 4,
-      y: ob.y + 4,
-      w: ob.w - 8,
-      h: ob.h - 6
-    };
+    const curW = dino.isDucking ? 32 * SCALE : DINO_WIDTH;
+    const dHitBox = { x: dino.x + 8, y: dino.y + 4, w: curW - 14, h: curH - 6 };
+    const oHitBox = { x: ob.x + 4, y: ob.y + 4, w: ob.w - 8, h: ob.h - 6 };
 
     if (
       dHitBox.x < oHitBox.x + oHitBox.w &&
@@ -319,7 +442,7 @@ function update() {
 
 function gameOver() {
   isGameOver = true;
-  playBeep(200, 'sawtooth', 0.25);
+  playBeep(180, 'sawtooth', 0.25);
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('dino_hi', highScore);
@@ -332,7 +455,7 @@ function resetGame() {
   speed = 6;
   isGameOver = false;
   frameCount = 0;
-  dino.y = GROUND_Y - 47;
+  dino.y = GROUND_Y - DINO_HEIGHT;
   dino.dy = 0;
   dino.isGrounded = true;
   dino.isDucking = false;
@@ -340,97 +463,63 @@ function resetGame() {
   document.body.classList.remove('dark');
 }
 
-// Vẽ đồ họa
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const color = nightMode ? '#e8eaed' : '#535353';
-  ctx.fillStyle = color;
+  const bgCol = nightMode ? '#202124' : '#f7f7f7';
 
   // 1. Mây
+  ctx.fillStyle = color;
   clouds.forEach(c => {
-    ctx.fillRect(c.x, c.y, 46, 12);
-    ctx.fillRect(c.x + 12, c.y - 7, 24, 7);
+    ctx.fillRect(c.x, c.y, 44, 10);
+    ctx.fillRect(c.x + 12, c.y - 6, 22, 6);
   });
 
   // 2. Mặt đất
   ctx.fillRect(0, GROUND_Y, canvas.width, 2);
   for (let x = -groundOffset; x < canvas.width; x += 24) {
     if ((x * 7) % 5 === 0) ctx.fillRect(x + 2, GROUND_Y + 4, 3, 2);
-    if ((x * 11) % 7 === 0) ctx.fillRect(x + 10, GROUND_Y + 8, 5, 2);
+    if ((x * 11) % 7 === 0) ctx.fillRect(x + 10, GROUND_Y + 8, 4, 2);
   }
 
-  // 3. Khủng long
-  if (!dino.isDucking) {
-    // Đứng/Nhảy/Chạy
-    ctx.fillRect(dino.x + 16, dino.y, 24, 18); // Đầu
-    ctx.fillRect(dino.x + 12, dino.y + 14, 28, 20); // Thân
-    ctx.fillRect(dino.x + 2, dino.y + 18, 12, 14); // Đuôi
-    ctx.fillRect(dino.x + 36, dino.y + 24, 8, 4); // Tay
-    // Mắt
-    ctx.fillStyle = nightMode ? '#202124' : '#f7f7f7';
-    ctx.fillRect(dino.x + 22, dino.y + 4, 4, 4);
-    ctx.fillStyle = color;
-
-    // Chân
-    if (!dino.isGrounded || isGameOver) {
-      ctx.fillRect(dino.x + 16, dino.y + 34, 4, 12);
-      ctx.fillRect(dino.x + 26, dino.y + 34, 4, 12);
-    } else {
-      if (dino.legState === 0) {
-        ctx.fillRect(dino.x + 16, dino.y + 34, 4, 13);
-        ctx.fillRect(dino.x + 26, dino.y + 34, 6, 8);
-      } else {
-        ctx.fillRect(dino.x + 16, dino.y + 34, 6, 8);
-        ctx.fillRect(dino.x + 26, dino.y + 34, 4, 13);
-      }
-    }
+  // 3. Khủng long chuẩn Pixel Art
+  if (isGameOver) {
+    drawPixelMap(DINO_DEAD, dino.x, dino.y, SCALE, color, bgCol);
+  } else if (dino.isDucking) {
+    drawPixelMap(dino.legState === 0 ? DINO_DUCK_1 : DINO_DUCK_2, dino.x, dino.y, SCALE, color, bgCol);
+  } else if (!dino.isGrounded) {
+    drawPixelMap(DINO_RUN_1, dino.x, dino.y, SCALE, color, bgCol);
   } else {
-    // Cúi người
-    ctx.fillRect(dino.x, dino.y + 8, 16, 12); // Đuôi
-    ctx.fillRect(dino.x + 14, dino.y + 6, 30, 16); // Thân nằm
-    ctx.fillRect(dino.x + 40, dino.y, 19, 14); // Đầu cúi
-    ctx.fillStyle = nightMode ? '#202124' : '#f7f7f7';
-    ctx.fillRect(dino.x + 46, dino.y + 3, 3, 3); // Mắt
-    ctx.fillStyle = color;
-
-    if (dino.legState === 0) {
-      ctx.fillRect(dino.x + 20, dino.y + 22, 4, 8);
-      ctx.fillRect(dino.x + 32, dino.y + 22, 6, 5);
-    } else {
-      ctx.fillRect(dino.x + 20, dino.y + 22, 6, 5);
-      ctx.fillRect(dino.x + 32, dino.y + 22, 4, 8);
-    }
+    drawPixelMap(dino.legState === 0 ? DINO_RUN_1 : DINO_RUN_2, dino.x, dino.y, SCALE, color, bgCol);
   }
 
   // 4. Chướng ngại vật
   obstacles.forEach(ob => {
     if (ob.type === 'cactus') {
-      ctx.fillRect(ob.x + ob.w / 2 - 3, ob.y, 6, ob.h);
-      ctx.fillRect(ob.x, ob.y + 10, ob.w, 4);
-      ctx.fillRect(ob.x, ob.y + 6, 4, 8);
-      ctx.fillRect(ob.x + ob.w - 4, ob.y + 6, 4, 8);
+      drawPixelMap(CACTUS_SPRITE, ob.x, ob.y, SCALE, color, bgCol);
     } else if (ob.type === 'bird') {
-      ctx.fillRect(ob.x + 8, ob.y + 10, 24, 10);
-      ctx.fillRect(ob.x, ob.y + 12, 10, 6);
+      ctx.fillStyle = color;
+      ctx.fillRect(ob.x + 6, ob.y + 8, 24, 8);
+      ctx.fillRect(ob.x, ob.y + 10, 8, 6);
       if (ob.flap === 0) {
-        ctx.fillRect(ob.x + 14, ob.y, 8, 12);
+        ctx.fillRect(ob.x + 12, ob.y - 2, 8, 10);
       } else {
-        ctx.fillRect(ob.x + 14, ob.y + 16, 8, 12);
+        ctx.fillRect(ob.x + 12, ob.y + 14, 8, 10);
       }
     }
   });
 
   // 5. Điểm số
+  ctx.fillStyle = color;
   ctx.font = '16px "Courier New", Courier, monospace';
   ctx.textAlign = 'right';
   const scoreStr = String(score).padStart(5, '0');
   const hiStr = String(highScore).padStart(5, '0');
   ctx.fillText(`HI ${hiStr}  ${scoreStr}`, canvas.width - 15, 25);
 
-  // Màn hình Game Over / Bắt đầu
   if (!isStarted) {
     ctx.textAlign = 'center';
-    ctx.fillText('NHẤN PHÍM CÁCH HOẶC CHẠM MÀN HÌNH ĐỂ CHƠI', canvas.width / 2, GROUND_Y - 60);
+    ctx.fillText('NHẤN PHÍM CÁCH HOẶC CHẠM MÀN HÌNH ĐỂ BẮT ĐẦU', canvas.width / 2, GROUND_Y - 60);
   } else if (isGameOver) {
     ctx.textAlign = 'center';
     ctx.font = 'bold 20px "Courier New", Courier, monospace';
