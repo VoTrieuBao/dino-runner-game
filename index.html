@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Runner Game - Custom Character</title>
+<title>Chrome T-Rex Dinosaur Game</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   body {
@@ -96,10 +96,6 @@ const soundBtn = document.getElementById('sound-btn');
 const btnJump = document.getElementById('btn-jump');
 const btnDuck = document.getElementById('btn-duck');
 
-// Tải hình ảnh nhân vật
-const charImg = new Image();
-charImg.src = 'character.png'; // Đường dẫn file ảnh trên repo
-
 let soundEnabled = true;
 soundBtn.addEventListener('click', () => {
   soundEnabled = !soundEnabled;
@@ -139,22 +135,174 @@ let isStarted = false;
 let frameCount = 0;
 let nightMode = false;
 
-// Kích thước nhân vật
-const CHAR_NORMAL_SIZE = 48;
-const CHAR_DUCK_W = 54;
-const CHAR_DUCK_H = 30;
+// Sprite Pixel Chuẩn của Google T-Rex
+// 'x' = thân khủng long, '2' = mắt trắng, '.' = trong suốt
+const DINO_RUN_1 = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx2xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  ".......xx..xx.........",
+  ".......xx.............",
+  ".......x.............."
+];
 
-const player = {
+const DINO_RUN_2 = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx2xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  "......xx...x..........",
+  "...........xx.........",
+  "............x........."
+];
+
+const DINO_DEAD = [
+  "............xxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xx.xxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxxxx",
+  "............xxxxxxxx..",
+  "............xxxxxxxxx.",
+  "x...........xxxxxx....",
+  "xx.........xxxxxxx....",
+  "xxx.......xxxxxxxxx...",
+  "xxxx.....xxxxxxxxxxxx.",
+  "xxxxx...xxxxxxxxxxxx..",
+  "xxxxxxxxxxxxxxxxxx....",
+  ".xxxxxxxxxxxxxxxx.....",
+  "..xxxxxxxxxxxxxx......",
+  "...xxxxxxxxxxxx.......",
+  "....xxxxxxxxxx........",
+  ".....xxxxxxxxx........",
+  "......xxxxxx..........",
+  ".......x...x..........",
+  ".......xx..xx.........",
+  ".......xx..xx.........",
+  ".......x....x........."
+];
+
+const DINO_DUCK_1 = [
+  "...................xxxxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "...................xx2xxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "xxxx...............xxxxxxxxxxxxx",
+  "xxxxxx............xxxxxxxxxxx...",
+  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
+  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
+  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
+  "...xxxxxxxxxxxxxxxxxxx..........",
+  "....xxxxxxxxxxxxxxxxx...........",
+  ".....xxxxxx....xxxxxx...........",
+  "......x...x.....x...x...........",
+  "......xx..x.....xx..x...........",
+  "......xx............x..........."
+];
+
+const DINO_DUCK_2 = [
+  "...................xxxxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "...................xx2xxxxxxxxxx",
+  "...................xxxxxxxxxxxxx",
+  "xxxx...............xxxxxxxxxxxxx",
+  "xxxxxx............xxxxxxxxxxx...",
+  "xxxxxxxx.xxxxxxxxxxxxxxxxxxxx...",
+  ".xxxxxxxxxxxxxxxxxxxxxxxxxxx....",
+  "..xxxxxxxxxxxxxxxxxxxxxxxxx.....",
+  "...xxxxxxxxxxxxxxxxxxx..........",
+  "....xxxxxxxxxxxxxxxxx...........",
+  ".....xxxxxx....xxxxxx...........",
+  "......x...x.....x...x...........",
+  "......x...xx....x...xx..........",
+  "..........xx........x..........."
+];
+
+const CACTUS_SPRITE = [
+  "..xx....xx..",
+  "..xx....xx..",
+  "..xx....xx..",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  "xxxx....xxxx",
+  ".xxxxxxxxxx.",
+  "...xxxxxx...",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx....",
+  "....xxxx...."
+];
+
+function drawPixelMap(map, startX, startY, scale, color, bgCol) {
+  for (let r = 0; r < map.length; r++) {
+    const row = map[r];
+    for (let c = 0; c < row.length; c++) {
+      const char = row[c];
+      if (char === 'x') {
+        ctx.fillStyle = color;
+        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
+      } else if (char === '2') {
+        ctx.fillStyle = bgCol;
+        ctx.fillRect(startX + c * scale, startY + r * scale, scale, scale);
+      }
+    }
+  }
+}
+
+const SCALE = 2.2;
+const DINO_HEIGHT = 23 * SCALE;
+const DINO_WIDTH = 21 * SCALE;
+const DUCK_HEIGHT = 15 * SCALE;
+
+const dino = {
   x: 50,
-  y: GROUND_Y - CHAR_NORMAL_SIZE,
-  w: CHAR_NORMAL_SIZE,
-  h: CHAR_NORMAL_SIZE,
+  y: GROUND_Y - DINO_HEIGHT,
   dy: 0,
   gravity: 0.65,
   jumpPower: -11.5,
   isGrounded: true,
   isDucking: false,
-  bobAngle: 0
+  legState: 0
 };
 
 let obstacles = [];
@@ -168,18 +316,18 @@ function jump() {
   initAudio();
   if (isGameOver) { resetGame(); return; }
   if (!isStarted) { isStarted = true; }
-  if (player.isGrounded && !player.isDucking) {
-    player.dy = player.jumpPower;
-    player.isGrounded = false;
+  if (dino.isGrounded && !dino.isDucking) {
+    dino.dy = dino.jumpPower;
+    dino.isGrounded = false;
     playBeep(440, 'square', 0.09);
   }
 }
 
 function setDuck(val) {
   if (!isStarted || isGameOver) return;
-  player.isDucking = val;
-  if (val && !player.isGrounded) {
-    player.dy += 4;
+  dino.isDucking = val;
+  if (val && !dino.isGrounded) {
+    dino.dy += 4;
   }
 }
 
@@ -202,13 +350,13 @@ btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setDuck(tru
 btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setDuck(false); });
 
 function spawnObstacle() {
-  const minGap = 210 + speed * 15;
+  const minGap = 200 + speed * 14;
   const lastObs = obstacles[obstacles.length - 1];
   if (lastObs && canvas.width - lastObs.x < minGap) return;
 
   const rand = Math.random();
   if (score > 250 && rand < 0.3) {
-    const flightHeights = [GROUND_Y - 25, GROUND_Y - 50, GROUND_Y - 72];
+    const flightHeights = [GROUND_Y - 25, GROUND_Y - 50, GROUND_Y - 70];
     obstacles.push({
       type: 'bird',
       x: canvas.width,
@@ -218,16 +366,12 @@ function spawnObstacle() {
       flap: 0
     });
   } else {
-    // Xương rồng
-    const cWidths = [18, 32, 22];
-    const cHeights = [38, 42, 48];
-    const idx = Math.floor(Math.random() * cWidths.length);
     obstacles.push({
       type: 'cactus',
       x: canvas.width,
-      y: GROUND_Y - cHeights[idx],
-      w: cWidths[idx],
-      h: cHeights[idx]
+      y: GROUND_Y - (19 * SCALE),
+      w: 12 * SCALE,
+      h: 19 * SCALE
     });
   }
 }
@@ -236,20 +380,19 @@ function update() {
   if (!isStarted || isGameOver) return;
   frameCount++;
 
-  player.dy += player.gravity;
-  player.y += player.dy;
+  dino.dy += dino.gravity;
+  dino.y += dino.dy;
 
-  const curH = player.isDucking ? CHAR_DUCK_H : CHAR_NORMAL_SIZE;
+  const curH = dino.isDucking ? DUCK_HEIGHT : DINO_HEIGHT;
 
-  if (player.y >= GROUND_Y - curH) {
-    player.y = GROUND_Y - curH;
-    player.dy = 0;
-    player.isGrounded = true;
+  if (dino.y >= GROUND_Y - curH) {
+    dino.y = GROUND_Y - curH;
+    dino.dy = 0;
+    dino.isGrounded = true;
   }
 
-  // Nhịp chân nhún nhảy khi chạy
-  if (player.isGrounded) {
-    player.bobAngle += 0.25;
+  if (frameCount % 6 === 0) {
+    dino.legState = 1 - dino.legState;
   }
 
   if (frameCount % 4 === 0) {
@@ -280,15 +423,15 @@ function update() {
       ob.flap = 1 - ob.flap;
     }
 
-    const curW = player.isDucking ? CHAR_DUCK_W : CHAR_NORMAL_SIZE;
-    const pHitBox = { x: player.x + 6, y: player.y + 4, w: curW - 12, h: curH - 6 };
+    const curW = dino.isDucking ? 32 * SCALE : DINO_WIDTH;
+    const dHitBox = { x: dino.x + 8, y: dino.y + 4, w: curW - 14, h: curH - 6 };
     const oHitBox = { x: ob.x + 4, y: ob.y + 4, w: ob.w - 8, h: ob.h - 6 };
 
     if (
-      pHitBox.x < oHitBox.x + oHitBox.w &&
-      pHitBox.x + pHitBox.w > oHitBox.x &&
-      pHitBox.y < oHitBox.y + oHitBox.h &&
-      pHitBox.y + pHitBox.h > oHitBox.y
+      dHitBox.x < oHitBox.x + oHitBox.w &&
+      dHitBox.x + dHitBox.w > oHitBox.x &&
+      dHitBox.y < oHitBox.y + oHitBox.h &&
+      dHitBox.y + dHitBox.h > oHitBox.y
     ) {
       gameOver();
     }
@@ -312,72 +455,18 @@ function resetGame() {
   speed = 6;
   isGameOver = false;
   frameCount = 0;
-  player.y = GROUND_Y - CHAR_NORMAL_SIZE;
-  player.dy = 0;
-  player.isGrounded = true;
-  player.isDucking = false;
+  dino.y = GROUND_Y - DINO_HEIGHT;
+  dino.dy = 0;
+  dino.isGrounded = true;
+  dino.isDucking = false;
   nightMode = false;
   document.body.classList.remove('dark');
-}
-
-// Vẽ nhân vật hình tròn hoặc bo góc kèm viền
-function drawCharacter() {
-  ctx.save();
-  const curW = player.isDucking ? CHAR_DUCK_W : CHAR_NORMAL_SIZE;
-  const curH = player.isDucking ? CHAR_DUCK_H : CHAR_NORMAL_SIZE;
-  const cx = player.x + curW / 2;
-  const cy = player.y + curH / 2;
-
-  ctx.translate(cx, cy);
-
-  // Xoay nhẹ hoặc nghiêng người khi nhảy hoặc cúi
-  if (isGameOver) {
-    ctx.rotate(0.3); // Ngã gục khi Game Over
-  } else if (!player.isGrounded) {
-    ctx.rotate(-0.1);
-  } else if (player.isDucking) {
-    ctx.rotate(0.05);
-  } else {
-    // Nhún nhẹ khi chạy
-    ctx.rotate(Math.sin(player.bobAngle) * 0.06);
-  }
-
-  // Cắt hình tròn / oval bo tròn
-  ctx.beginPath();
-  ctx.ellipse(0, 0, curW / 2, curH / 2, 0, 0, Math.PI * 2);
-  ctx.closePath();
-
-  // Đổ bóng & vẽ ảnh
-  ctx.save();
-  ctx.clip();
-  if (charImg.complete && charImg.naturalWidth > 0) {
-    ctx.drawImage(charImg, -curW / 2, -curH / 2, curW, curH);
-  } else {
-    // Dự phòng nếu chưa tải ảnh: vẽ khối tròn màu cam
-    ctx.fillStyle = '#ff7675';
-    ctx.fillRect(-curW / 2, -curH / 2, curW, curH);
-  }
-  ctx.restore();
-
-  // Vẽ viền tròn nổi bật quanh nhân vật
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = nightMode ? '#e8eaed' : '#535353';
-  ctx.stroke();
-
-  // Vẽ chân bước nhỏ bên dưới khi đứng chạy
-  if (player.isGrounded && !player.isDucking && !isGameOver) {
-    ctx.fillStyle = nightMode ? '#e8eaed' : '#535353';
-    const legOffset = Math.sin(player.bobAngle) * 4;
-    ctx.fillRect(-8, curH / 2 - 2, 4, 6 + legOffset);
-    ctx.fillRect(4, curH / 2 - 2, 4, 6 - legOffset);
-  }
-
-  ctx.restore();
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const color = nightMode ? '#e8eaed' : '#535353';
+  const bgCol = nightMode ? '#202124' : '#f7f7f7';
 
   // 1. Mây
   ctx.fillStyle = color;
@@ -393,18 +482,23 @@ function draw() {
     if ((x * 11) % 7 === 0) ctx.fillRect(x + 10, GROUND_Y + 8, 4, 2);
   }
 
-  // 3. Nhân vật
-  drawCharacter();
+  // 3. Khủng long T-Rex gốc
+  if (isGameOver) {
+    drawPixelMap(DINO_DEAD, dino.x, dino.y, SCALE, color, bgCol);
+  } else if (dino.isDucking) {
+    drawPixelMap(dino.legState === 0 ? DINO_DUCK_1 : DINO_DUCK_2, dino.x, dino.y, SCALE, color, bgCol);
+  } else if (!dino.isGrounded) {
+    drawPixelMap(DINO_RUN_1, dino.x, dino.y, SCALE, color, bgCol);
+  } else {
+    drawPixelMap(dino.legState === 0 ? DINO_RUN_1 : DINO_RUN_2, dino.x, dino.y, SCALE, color, bgCol);
+  }
 
   // 4. Chướng ngại vật
   obstacles.forEach(ob => {
-    ctx.fillStyle = color;
     if (ob.type === 'cactus') {
-      ctx.fillRect(ob.x + ob.w / 2 - 3, ob.y, 6, ob.h);
-      ctx.fillRect(ob.x, ob.y + 8, ob.w, 4);
-      ctx.fillRect(ob.x, ob.y + 4, 4, 8);
-      ctx.fillRect(ob.x + ob.w - 4, ob.y + 4, 4, 8);
+      drawPixelMap(CACTUS_SPRITE, ob.x, ob.y, SCALE, color, bgCol);
     } else if (ob.type === 'bird') {
+      ctx.fillStyle = color;
       ctx.fillRect(ob.x + 6, ob.y + 8, 24, 8);
       ctx.fillRect(ob.x, ob.y + 10, 8, 6);
       if (ob.flap === 0) {
