@@ -16,6 +16,7 @@
     justify-content: center;
     min-height: 100vh;
     overflow: hidden;
+    outline: none;
     transition: background-color 0.8s, color 0.8s;
   }
   body.dark {
@@ -30,6 +31,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    outline: none;
   }
   canvas {
     background: transparent;
@@ -37,6 +39,7 @@
     height: auto;
     display: block;
     image-rendering: pixelated;
+    outline: none;
   }
   .controls-bar {
     display: flex;
@@ -75,17 +78,17 @@
   }
 </style>
 </head>
-<body>
+<body tabindex="0">
 
-<div id="game-wrapper">
-  <canvas id="gameCanvas" width="800" height="240"></canvas>
+<div id="game-wrapper" tabindex="0">
+  <canvas id="gameCanvas" width="800" height="240" tabindex="0"></canvas>
   <div class="controls-bar">
-    <span class="hint-text">Nhấn <b>SPACE</b> / <b>↑</b>: Nhảy | <b>↓</b>: Cúi</span>
+    <span class="hint-text">Dùng phím mũi tên: <b>↑</b> để Nhảy | <b>↓</b> để Cúi</span>
     <span id="sound-btn" style="cursor: pointer;">🔊 Âm thanh: BẬT</span>
   </div>
   <div class="touch-controls">
-    <button class="touch-btn" id="btn-duck">CÚI (DUCK)</button>
-    <button class="touch-btn" id="btn-jump">NHẢY (JUMP)</button>
+    <button class="touch-btn" id="btn-duck">CÚI (↓)</button>
+    <button class="touch-btn" id="btn-jump">NHẢY (↑)</button>
   </div>
 </div>
 
@@ -96,13 +99,25 @@ const soundBtn = document.getElementById('sound-btn');
 const btnJump = document.getElementById('btn-jump');
 const btnDuck = document.getElementById('btn-duck');
 
+// Tự động nhận diện bàn phím ngay khi load
+window.addEventListener('load', () => {
+  window.focus();
+  document.body.focus();
+});
+window.addEventListener('mouseenter', () => {
+  window.focus();
+});
+document.addEventListener('click', () => {
+  window.focus();
+});
+
 let soundEnabled = true;
 soundBtn.addEventListener('click', () => {
   soundEnabled = !soundEnabled;
   soundBtn.textContent = soundEnabled ? '🔊 Âm thanh: BẬT' : '🔈 Âm thanh: TẮT';
 });
 
-// Web Audio API
+// Âm thanh 8-bit
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function initAudio() {
@@ -135,8 +150,7 @@ let isStarted = false;
 let frameCount = 0;
 let nightMode = false;
 
-// Sprite Pixel Chuẩn của Google T-Rex
-// 'x' = thân khủng long, '2' = mắt trắng, '.' = trong suốt
+// Ma trận pixel khủng long T-Rex
 const DINO_RUN_1 = [
   "............xxxxxxxxx",
   "............xxxxxxxxxx",
@@ -315,7 +329,7 @@ let groundOffset = 0;
 function jump() {
   initAudio();
   if (isGameOver) { resetGame(); return; }
-  if (!isStarted) { isStarted = true; }
+  if (!isStarted) { isStarted = true; return; }
   if (dino.isGrounded && !dino.isDucking) {
     dino.dy = dino.jumpPower;
     dino.isGrounded = false;
@@ -327,24 +341,29 @@ function setDuck(val) {
   if (!isStarted || isGameOver) return;
   dino.isDucking = val;
   if (val && !dino.isGrounded) {
-    dino.dy += 4;
+    dino.dy += 4; // Rơi xuống nhanh hơn khi đang nhảy mà bấm cúi
   }
 }
 
+// Bắt phím bàn phím: Mũi tên Lên / Mũi tên Xuống / Space
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' || e.code === 'ArrowUp') {
+  if (e.key === 'ArrowUp' || e.code === 'ArrowUp' || e.code === 'Space') {
     e.preventDefault();
     jump();
-  } else if (e.code === 'ArrowDown') {
+  } else if (e.key === 'ArrowDown' || e.code === 'ArrowDown') {
     e.preventDefault();
     setDuck(true);
   }
-});
-window.addEventListener('keyup', (e) => {
-  if (e.code === 'ArrowDown') setDuck(false);
-});
+}, { passive: false });
 
-canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowDown' || e.code === 'ArrowDown') {
+    e.preventDefault();
+    setDuck(false);
+  }
+}, { passive: false });
+
+// Hỗ trợ cảm ứng trên điện thoại
 btnJump.addEventListener('pointerdown', (e) => { e.preventDefault(); jump(); });
 btnDuck.addEventListener('pointerdown', (e) => { e.preventDefault(); setDuck(true); });
 btnDuck.addEventListener('pointerup', (e) => { e.preventDefault(); setDuck(false); });
@@ -468,21 +487,21 @@ function draw() {
   const color = nightMode ? '#e8eaed' : '#535353';
   const bgCol = nightMode ? '#202124' : '#f7f7f7';
 
-  // 1. Mây
+  // Mây
   ctx.fillStyle = color;
   clouds.forEach(c => {
     ctx.fillRect(c.x, c.y, 44, 10);
     ctx.fillRect(c.x + 12, c.y - 6, 22, 6);
   });
 
-  // 2. Mặt đất
+  // Mặt đất
   ctx.fillRect(0, GROUND_Y, canvas.width, 2);
   for (let x = -groundOffset; x < canvas.width; x += 24) {
     if ((x * 7) % 5 === 0) ctx.fillRect(x + 2, GROUND_Y + 4, 3, 2);
     if ((x * 11) % 7 === 0) ctx.fillRect(x + 10, GROUND_Y + 8, 4, 2);
   }
 
-  // 3. Khủng long T-Rex gốc
+  // Khủng long
   if (isGameOver) {
     drawPixelMap(DINO_DEAD, dino.x, dino.y, SCALE, color, bgCol);
   } else if (dino.isDucking) {
@@ -493,7 +512,7 @@ function draw() {
     drawPixelMap(dino.legState === 0 ? DINO_RUN_1 : DINO_RUN_2, dino.x, dino.y, SCALE, color, bgCol);
   }
 
-  // 4. Chướng ngại vật
+  // Chướng ngại vật
   obstacles.forEach(ob => {
     if (ob.type === 'cactus') {
       drawPixelMap(CACTUS_SPRITE, ob.x, ob.y, SCALE, color, bgCol);
@@ -509,7 +528,7 @@ function draw() {
     }
   });
 
-  // 5. Điểm số
+  // Điểm số
   ctx.fillStyle = color;
   ctx.font = '16px "Courier New", Courier, monospace';
   ctx.textAlign = 'right';
@@ -519,13 +538,13 @@ function draw() {
 
   if (!isStarted) {
     ctx.textAlign = 'center';
-    ctx.fillText('NHẤN PHÍM CÁCH HOẶC CHẠM MÀN HÌNH ĐỂ BẮT ĐẦU', canvas.width / 2, GROUND_Y - 60);
+    ctx.fillText('BẤM PHÍM MŨI TÊN LÊN (↑) HOẶC PHÍM CÁCH ĐỂ BẮT ĐẦU', canvas.width / 2, GROUND_Y - 60);
   } else if (isGameOver) {
     ctx.textAlign = 'center';
     ctx.font = 'bold 20px "Courier New", Courier, monospace';
     ctx.fillText('G A M E   O V E R', canvas.width / 2, GROUND_Y - 70);
     ctx.font = '14px "Courier New", Courier, monospace';
-    ctx.fillText('↺ Nhấn Phím Cách hoặc chạm màn hình để chơi lại', canvas.width / 2, GROUND_Y - 40);
+    ctx.fillText('↺ Bấm Mũi Tên Lên (↑) hoặc Phím Cách để chơi lại', canvas.width / 2, GROUND_Y - 40);
   }
 }
 
