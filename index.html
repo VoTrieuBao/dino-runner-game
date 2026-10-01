@@ -3,157 +3,151 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Classic Snake Game</title>
+<title>Trò Chơi Tìm Điểm Khác Nhau</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
   body {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-    font-family: 'Courier New', Courier, monospace;
+    background-color: #f1f2f6;
+    color: #2f3542;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    overflow: hidden;
-    outline: none;
-  }
-  #game-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     padding: 10px;
-    outline: none;
   }
-  .header-bar {
-    width: 100%;
-    max-width: 400px;
+  .header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  h2 { font-size: 20px; color: #2ed573; margin-bottom: 4px; }
+  .status-bar {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 15px;
+    align-items: center;
+    width: 100%;
+    max-width: 760px;
+    background: #ffffff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    margin-bottom: 10px;
     font-weight: bold;
-    color: #00ff88;
+    font-size: 14px;
   }
-  .speed-selector {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .speed-btn {
-    padding: 4px 10px;
-    background: #2a2a2a;
-    color: #888;
-    border: 1px solid #444;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 12px;
+  .btn-hint {
+    background: #ffa502;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: bold;
     cursor: pointer;
   }
-  .speed-btn.active {
-    background: #00ff88;
-    color: #111;
+  .btn-hint:active { background: #eccc68; }
+  .canvas-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .card-box {
+    position: relative;
+    background: white;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  .card-label {
+    text-align: center;
     font-weight: bold;
-    border-color: #00ff88;
+    font-size: 13px;
+    padding: 4px 0;
+    color: #57606f;
   }
   canvas {
-    background-color: #0f1410;
-    border: 3px solid #00ff88;
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
     display: block;
-    outline: none;
-  }
-  .hint-text {
-    margin-top: 10px;
-    font-size: 13px;
-    color: #888;
-  }
-  .d-pad {
-    display: none;
-    margin-top: 14px;
-    width: 180px;
-    height: 140px;
-    position: relative;
-  }
-  .d-btn {
-    position: absolute;
-    width: 52px;
-    height: 44px;
-    background: #2a2a2a;
-    color: #00ff88;
-    border: 2px solid #00ff88;
+    cursor: crosshair;
     border-radius: 6px;
-    font-size: 18px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
   }
-  .d-btn:active { background: #00ff88; color: #1a1a1a; }
-  #btn-up { top: 0; left: 64px; }
-  #btn-left { top: 48px; left: 8px; }
-  #btn-right { top: 48px; left: 120px; }
-  #btn-down { bottom: 0; left: 64px; }
-
-  @media (pointer: coarse), (max-width: 768px) {
-    .d-pad { display: block; }
-    .hint-text { display: none; }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    text-align: center;
+    z-index: 100;
+  }
+  .modal h3 { color: #2ed573; font-size: 22px; margin-bottom: 8px; }
+  .modal button {
+    margin-top: 14px;
+    padding: 8px 20px;
+    background: #2ed573;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
   }
 </style>
 </head>
-<body tabindex="0">
+<body>
 
-<div id="game-wrapper" tabindex="0">
-  <div class="header-bar">
-    <span id="score-text">ĐIỂM: 0</span>
-    <span id="hi-text">KỶ LỤC: 0</span>
-  </div>
+<div class="header">
+  <h2>🔍 TÌM 5 ĐIỂM KHÁC NHAU</h2>
+  <span style="font-size: 13px; color: #747d8c;">So sánh hai bức ảnh và bấm vào những điểm khác biệt</span>
+</div>
 
-  <!-- Bộ chọn tốc độ -->
-  <div class="speed-selector">
-    <button class="speed-btn" data-speed="100">Bình thường</button>
-    <button class="speed-btn active" data-speed="70">⚡ Nhanh</button>
-    <button class="speed-btn" data-speed="48">🔥 Siêu tốc</button>
-  </div>
-  
-  <canvas id="gameCanvas" width="400" height="400" tabindex="0"></canvas>
-  
-  <div class="hint-text">
-    Dùng <b>4 phím Mũi Tên</b> hoặc <b>W, A, S, D</b> để di chuyển
-  </div>
+<div class="status-bar">
+  <div>Màn: <span id="level-display" style="color: #3742fa;">1</span>/2</div>
+  <div>Đã tìm: <span id="found-count" style="color: #ff4757;">0</span>/5</div>
+  <div>⏱️ <span id="timer">00:00</span></div>
+  <button class="btn-hint" id="btn-hint">💡 Gợi ý (3)</button>
+</div>
 
-  <div class="d-pad">
-    <button class="d-btn" id="btn-up">↑</button>
-    <button class="d-btn" id="btn-left">←</button>
-    <button class="d-btn" id="btn-right">→</button>
-    <button class="d-btn" id="btn-down">↓</button>
+<div class="canvas-container">
+  <div class="card-box">
+    <div class="card-label">ẢNH GỐC (BÊN TRÁI)</div>
+    <canvas id="canvasA" width="360" height="280"></canvas>
+  </div>
+  <div class="card-box">
+    <div class="card-label">ẢNH CÓ ĐIỂM KHÁC (BÊN PHẢI)</div>
+    <canvas id="canvasB" width="360" height="280"></canvas>
   </div>
 </div>
 
+<div class="modal" id="winModal">
+  <h3>🎉 XUẤT SẮC!</h3>
+  <p id="winMsg">Bạn đã tìm thấy tất cả các điểm khác nhau!</p>
+  <button id="btn-next">Tiếp tục màn sau ➔</button>
+</div>
+
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreText = document.getElementById('score-text');
-const hiText = document.getElementById('hi-text');
-const speedBtns = document.querySelectorAll('.speed-btn');
+const canvasA = document.getElementById('canvasA');
+const canvasB = document.getElementById('canvasB');
+const ctxA = canvasA.getContext('2d');
+const ctxB = canvasB.getContext('2d');
 
-window.addEventListener('load', () => { window.focus(); document.body.focus(); });
-window.addEventListener('mouseenter', () => window.focus());
-document.addEventListener('click', () => window.focus());
+const foundCountEl = document.getElementById('found-count');
+const timerEl = document.getElementById('timer');
+const hintBtn = document.getElementById('btn-hint');
+const levelEl = document.getElementById('level-display');
+const winModal = document.getElementById('winModal');
+const btnNext = document.getElementById('btn-next');
 
-// Audio
+// Âm thanh Web Audio API
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-function initAudio() {
-  if (!audioCtx) audioCtx = new AudioContext();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-function playTone(freq, type, duration) {
+function playSound(freq, duration, type='sine') {
   try {
-    initAudio();
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
@@ -164,255 +158,330 @@ function playTone(freq, type, duration) {
     gain.connect(audioCtx.destination);
     osc.start();
     osc.stop(audioCtx.currentTime + duration);
-  } catch (e) {}
+  } catch(e) {}
 }
 
-const GRID_SIZE = 20;
-const CELL_COUNT = canvas.width / GRID_SIZE;
+let curLevel = 0;
+let hintsLeft = 3;
+let seconds = 0;
+let timerInterval = null;
 
-let baseSpeed = 70; // Mặc định chế độ "Nhanh" (70ms mỗi ô)
-let currentSpeed = baseSpeed;
-let snake = [];
-let dir = { x: 1, y: 0 };
-let nextDir = { x: 1, y: 0 };
-let food = { x: 15, y: 10 };
-let bonusFood = null;
-let bonusTimer = 0;
-let score = 0;
-let highScore = localStorage.getItem('snake_hi') || 0;
-let isGameOver = false;
-let isStarted = false;
-let lastUpdateTime = 0;
-
-hiText.textContent = `KỶ LỤC: ${highScore}`;
-
-// Lựa chọn tốc độ
-speedBtns.forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    speedBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    baseSpeed = parseInt(btn.dataset.speed);
-    currentSpeed = baseSpeed;
-    btn.blur();
-    window.focus();
-  });
-});
-
-function resetGame() {
-  snake = [
-    { x: 5, y: 10 },
-    { x: 4, y: 10 },
-    { x: 3, y: 10 }
-  ];
-  dir = { x: 1, y: 0 };
-  nextDir = { x: 1, y: 0 };
-  score = 0;
-  currentSpeed = baseSpeed;
-  isGameOver = false;
-  isStarted = true;
-  bonusFood = null;
-  scoreText.textContent = `ĐIỂM: ${score}`;
-  spawnFood();
-}
-
-function spawnFood() {
-  let valid = false;
-  while (!valid) {
-    food = {
-      x: Math.floor(Math.random() * CELL_COUNT),
-      y: Math.floor(Math.random() * CELL_COUNT)
-    };
-    valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
-  }
-
-  if (!bonusFood && Math.random() < 0.25 && score > 30) {
-    let bValid = false;
-    let bPos;
-    while (!bValid) {
-      bPos = {
-        x: Math.floor(Math.random() * CELL_COUNT),
-        y: Math.floor(Math.random() * CELL_COUNT)
-      };
-      bValid = !snake.some(s => s.x === bPos.x && s.y === bPos.y) && (bPos.x !== food.x || bPos.y !== food.y);
-    }
-    bonusFood = bPos;
-    bonusTimer = 45;
-  }
-}
-
-function changeDirection(dx, dy) {
-  initAudio();
-  if (!isStarted || isGameOver) {
-    resetGame();
-    return;
-  }
-  if (dx !== -dir.x && dy !== -dir.y) {
-    nextDir = { x: dx, y: dy };
-  }
-}
-
-window.addEventListener('keydown', (e) => {
-  if (['ArrowUp', 'KeyW'].includes(e.code)) { e.preventDefault(); changeDirection(0, -1); }
-  else if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); changeDirection(0, 1); }
-  else if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); changeDirection(-1, 0); }
-  else if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); changeDirection(1, 0); }
-  else if (e.code === 'Space' && (!isStarted || isGameOver)) { e.preventDefault(); resetGame(); }
-}, { passive: false });
-
-document.getElementById('btn-up').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, -1); });
-document.getElementById('btn-down').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, 1); });
-document.getElementById('btn-left').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(-1, 0); });
-document.getElementById('btn-right').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(1, 0); });
-canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  if (!isStarted || isGameOver) resetGame();
-});
-
-function update() {
-  if (!isStarted || isGameOver) return;
-
-  dir = nextDir;
-  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
-
-  if (head.x < 0 || head.x >= CELL_COUNT || head.y < 0 || head.y >= CELL_COUNT) {
-    triggerGameOver();
-    return;
-  }
-
-  if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-    triggerGameOver();
-    return;
-  }
-
-  snake.unshift(head);
-
-  if (head.x === food.x && head.y === food.y) {
-    score += 10;
-    scoreText.textContent = `ĐIỂM: ${score}`;
-    playTone(600, 'square', 0.08);
-    // Càng ăn càng tăng tốc độ tối đa xuống tới 35ms/bước
-    if (currentSpeed > 35) currentSpeed -= 1.2;
-    spawnFood();
-  } else if (bonusFood && head.x === bonusFood.x && head.y === bonusFood.y) {
-    score += 35;
-    scoreText.textContent = `ĐIỂM: ${score}`;
-    playTone(900, 'square', 0.15);
-    bonusFood = null;
-  } else {
-    snake.pop();
-  }
-
-  if (bonusFood) {
-    bonusTimer--;
-    if (bonusTimer <= 0) bonusFood = null;
-  }
-}
-
-function triggerGameOver() {
-  isGameOver = true;
-  playTone(160, 'sawtooth', 0.35);
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem('snake_hi', highScore);
-    hiText.textContent = `KỶ LỤC: ${highScore}`;
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Lưới
-  ctx.strokeStyle = '#141e17';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= canvas.width; i += GRID_SIZE) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-  }
-
-  // Mồi đỏ
-  ctx.fillStyle = '#ff4757';
-  ctx.beginPath();
-  ctx.arc(food.x * GRID_SIZE + 10, food.y * GRID_SIZE + 10, 8, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#2ed573';
-  ctx.fillRect(food.x * GRID_SIZE + 9, food.y * GRID_SIZE + 2, 2, 4);
-
-  // Mồi vàng
-  if (bonusFood) {
-    if (bonusTimer > 15 || Math.floor(bonusTimer / 2) % 2 === 0) {
-      ctx.fillStyle = '#ffa502';
+// Định nghĩa dữ liệu 2 màn chơi với các đặc điểm khác biệt
+const levels = [
+  {
+    // MÀN 1: Ngôi nhà thảo nguyên và bầu trời
+    drawBase: function(ctx, isDiff) {
+      // Bầu trời
+      ctx.fillStyle = '#70a1ff';
+      ctx.fillRect(0, 0, 360, 160);
+      // Đồi cỏ
+      ctx.fillStyle = '#2ed573';
       ctx.beginPath();
-      ctx.arc(bonusFood.x * GRID_SIZE + 10, bonusFood.y * GRID_SIZE + 10, 9, 0, Math.PI * 2);
+      ctx.arc(100, 260, 180, 0, Math.PI * 2);
+      ctx.arc(280, 270, 170, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('★', bonusFood.x * GRID_SIZE + 10, bonusFood.y * GRID_SIZE + 14);
-    }
-  }
 
-  // Thân rắn
-  snake.forEach((segment, idx) => {
-    if (idx === 0) {
-      ctx.fillStyle = '#00ff88';
-      ctx.fillRect(segment.x * GRID_SIZE + 1, segment.y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
-      ctx.fillStyle = '#111';
-      if (dir.x === 1) {
-        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 4, 3, 3);
-        ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 13, 3, 3);
-      } else if (dir.x === -1) {
-        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 4, 3, 3);
-        ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 13, 3, 3);
-      } else if (dir.y === -1) {
-        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 5, 3, 3);
-        ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 5, 3, 3);
-      } else {
-        ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 12, 3, 3);
-        ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 12, 3, 3);
+      // Mặt trời (Điểm 1: Màn B đổi thành màu cam và có kính râm)
+      ctx.fillStyle = isDiff ? '#ff7f50' : '#ffa502';
+      ctx.beginPath();
+      ctx.arc(60, 50, 24, 0, Math.PI * 2);
+      ctx.fill();
+      if (isDiff) {
+        // Kính râm trên mặt trời
+        ctx.fillStyle = '#2f3542';
+        ctx.fillRect(52, 45, 18, 6);
       }
-    } else {
-      ctx.fillStyle = idx % 2 === 0 ? '#10ac84' : '#1dd1a1';
-      ctx.fillRect(segment.x * GRID_SIZE + 2, segment.y * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
-    }
+
+      // Đám mây (Điểm 2: Màn B thiếu 1 đám mây góc phải)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(170, 45, 14, 0, Math.PI*2);
+      ctx.arc(190, 40, 18, 0, Math.PI*2);
+      ctx.arc(210, 45, 14, 0, Math.PI*2);
+      ctx.fill();
+
+      if (!isDiff) {
+        // Đám mây chỉ có ở ảnh A
+        ctx.beginPath();
+        ctx.arc(290, 55, 12, 0, Math.PI*2);
+        ctx.arc(310, 50, 15, 0, Math.PI*2);
+        ctx.arc(330, 55, 12, 0, Math.PI*2);
+        ctx.fill();
+      }
+
+      // Ngôi nhà
+      ctx.fillStyle = '#ffa502';
+      ctx.fillRect(140, 140, 80, 70); // Thân nhà
+      // Mái nhà (Điểm 3: Màu mái nhà đỏ vs xanh tím)
+      ctx.fillStyle = isDiff ? '#9c88ff' : '#eb4d4b';
+      ctx.beginPath();
+      ctx.moveTo(130, 140);
+      ctx.lineTo(180, 95);
+      ctx.lineTo(230, 140);
+      ctx.fill();
+
+      // Cửa sổ nhà (Điểm 4: Màn B cửa sổ mở có hình chữ thập, màn A trơn)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(150, 155, 20, 20);
+      if (isDiff) {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(159, 155, 2, 20);
+        ctx.fillRect(150, 164, 20, 2);
+      }
+
+      // Cửa chính
+      ctx.fillStyle = '#6D4C41';
+      ctx.fillRect(185, 170, 22, 40);
+
+      // Cây bên phải
+      ctx.fillStyle = '#795548';
+      ctx.fillRect(285, 160, 14, 60);
+      ctx.fillStyle = '#26de81';
+      ctx.beginPath();
+      ctx.arc(292, 145, 28, 0, Math.PI*2);
+      ctx.fill();
+
+      // Quả táo trên cây (Điểm 5: Cây ở màn A có 3 quả đỏ, màn B có 2 quả)
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.arc(285, 135, 4, 0, Math.PI*2);
+      ctx.arc(302, 148, 4, 0, Math.PI*2);
+      if (!isDiff) {
+        ctx.arc(290, 155, 4, 0, Math.PI*2); // Quả thứ 3
+      }
+      ctx.fill();
+    },
+    // Vị trí 5 điểm khác biệt (x, y, bán kính nhận diện r)
+    differences: [
+      { id: 1, x: 60, y: 50, r: 25, hint: "Mặt trời góc trái" },
+      { id: 2, x: 310, y: 52, r: 28, hint: "Đám mây góc trên bên phải" },
+      { id: 3, x: 180, y: 115, r: 26, hint: "Màu sắc của mái nhà" },
+      { id: 4, x: 160, y: 165, r: 18, hint: "Ô cửa sổ màu trắng" },
+      { id: 5, x: 290, y: 155, r: 18, hint: "Quả táo màu đỏ trên tán cây" }
+    ]
+  },
+  {
+    // MÀN 2: Thuyền buồm ngoài biển
+    drawBase: function(ctx, isDiff) {
+      // Bầu trời
+      ctx.fillStyle = '#ffbe76';
+      ctx.fillRect(0, 0, 360, 170);
+      // Biển
+      ctx.fillStyle = '#0984e3';
+      ctx.fillRect(0, 170, 360, 110);
+
+      // Hải đăng (Điểm 1: Màn B đèn hải đăng phát sáng vàng)
+      ctx.fillStyle = '#d63031';
+      ctx.fillRect(40, 120, 20, 60);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(40, 135, 20, 12);
+      if (isDiff) {
+        // Ánh đèn hải đăng
+        ctx.fillStyle = 'rgba(255, 234, 167, 0.85)';
+        ctx.beginPath();
+        ctx.moveTo(60, 125);
+        ctx.lineTo(130, 95);
+        ctx.lineTo(130, 150);
+        ctx.fill();
+      }
+
+      // Thuyền buồm lớn
+      ctx.fillStyle = '#6c5ce7'; // Thân thuyền
+      ctx.beginPath();
+      ctx.moveTo(170, 200);
+      ctx.lineTo(260, 200);
+      ctx.lineTo(240, 225);
+      ctx.lineTo(190, 225);
+      ctx.fill();
+
+      // Cánh buồm (Điểm 2: Cánh buồm trắng vs cánh buồm sọc đỏ)
+      ctx.fillStyle = isDiff ? '#ff7675' : '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(215, 140);
+      ctx.lineTo(215, 195);
+      ctx.lineTo(255, 195);
+      ctx.fill();
+
+      // Lá cờ đỉnh buồm (Điểm 3: Màn A có cờ, Màn B không có cờ)
+      if (!isDiff) {
+        ctx.fillStyle = '#e84393';
+        ctx.beginPath();
+        ctx.moveTo(215, 138);
+        ctx.lineTo(228, 144);
+        ctx.lineTo(215, 150);
+        ctx.fill();
+      }
+
+      // Đàn hải âu (Điểm 4: Màn A có 3 con chim, Màn B có 2 con)
+      ctx.strokeStyle = '#2d3436';
+      ctx.lineWidth = 2;
+      // Chim 1
+      ctx.beginPath(); ctx.arc(120, 50, 8, Math.PI, 0); ctx.arc(136, 50, 8, Math.PI, 0); ctx.stroke();
+      // Chim 2
+      ctx.beginPath(); ctx.arc(160, 65, 6, Math.PI, 0); ctx.arc(172, 65, 6, Math.PI, 0); ctx.stroke();
+      if (!isDiff) {
+        // Chim thứ 3 chỉ có ở A
+        ctx.beginPath(); ctx.arc(270, 45, 7, Math.PI, 0); ctx.arc(284, 45, 7, Math.PI, 0); ctx.stroke();
+      }
+
+      // Con cá nhảy lên khỏi mặt biển (Điểm 5: Màn B có chú cá heo con nhảy lên)
+      if (isDiff) {
+        ctx.fillStyle = '#74b9ff';
+        ctx.beginPath();
+        ctx.arc(310, 185, 9, 0, Math.PI);
+        ctx.fill();
+      }
+    },
+    differences: [
+      { id: 1, x: 90, y: 125, r: 25, hint: "Tia sáng đèn từ tháp hải đăng" },
+      { id: 2, x: 235, y: 170, r: 24, hint: "Màu của cánh buồm thuyền" },
+      { id: 3, x: 220, y: 144, r: 16, hint: "Lá cờ trên đỉnh cột buồm" },
+      { id: 4, x: 277, y: 45, r: 18, hint: "Con chim hải âu góc trên" },
+      { id: 5, x: 310, y: 185, r: 18, hint: "Mặt nước biển bên phải" }
+    ]
+  }
+];
+
+let foundList = [];
+
+function loadLevel(lvl) {
+  curLevel = lvl;
+  foundList = [];
+  levelEl.textContent = curLevel + 1;
+  foundCountEl.textContent = 0;
+  winModal.style.display = 'none';
+
+  render();
+}
+
+function render() {
+  const data = levels[curLevel];
+  // Vẽ ảnh A và ảnh B
+  data.drawBase(ctxA, false);
+  data.drawBase(ctxB, true);
+
+  // Vẽ các vòng tròn đỏ viền quanh các điểm đã tìm thấy
+  foundList.forEach(diff => {
+    drawFoundCircle(ctxA, diff.x, diff.y, diff.r);
+    drawFoundCircle(ctxB, diff.x, diff.y, diff.r);
   });
-
-  if (!isStarted) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 20px "Courier New", Courier, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('RẮN SĂN MỒI', canvas.width / 2, canvas.height / 2 - 20);
-    ctx.font = '13px "Courier New", Courier, monospace';
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Nhấn Phím Mũi Tên để Chơi', canvas.width / 2, canvas.height / 2 + 15);
-  } else if (isGameOver) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ff4757';
-    ctx.font = 'bold 24px "Courier New", Courier, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
-    ctx.font = '13px "Courier New", Courier, monospace';
-    ctx.fillStyle = '#00ff88';
-    ctx.fillText(`Tổng điểm: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
-    ctx.fillStyle = '#aaa';
-    ctx.fillText('Nhấn Mũi Tên hoặc chạm để chơi lại', canvas.width / 2, canvas.height / 2 + 35);
-  }
 }
 
-function gameLoop(currentTime) {
-  if (currentTime - lastUpdateTime >= currentSpeed) {
-    update();
-    lastUpdateTime = currentTime;
-  }
-  draw();
-  requestAnimationFrame(gameLoop);
+function drawFoundCircle(ctx, x, y, r) {
+  ctx.save();
+  ctx.strokeStyle = '#ff4757';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
-resetGame();
-isStarted = false;
-requestAnimationFrame(gameLoop);
+function checkClick(x, y) {
+  const currentDiffs = levels[curLevel].differences;
+  for (let diff of currentDiffs) {
+    if (foundList.includes(diff)) continue;
+
+    const dist = Math.hypot(x - diff.x, y - diff.y);
+    if (dist <= diff.r + 10) {
+      foundList.push(diff);
+      foundCountEl.textContent = foundList.length;
+      
+      // Âm thanh chuông báo tìm đúng
+      playSound(660, 0.1);
+      setTimeout(() => playSound(880, 0.15), 100);
+
+      render();
+
+      // Kiểm tra hoàn thành màn
+      if (foundList.length === currentDiffs.length) {
+        setTimeout(showWin, 400);
+      }
+      return;
+    }
+  }
+  // Bấm trượt
+  playSound(220, 0.1, 'sawtooth');
+}
+
+function getCanvasCoords(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+canvasA.addEventListener('pointerdown', (e) => {
+  const coords = getCanvasCoords(canvasA, e);
+  checkClick(coords.x, coords.y);
+});
+
+canvasB.addEventListener('pointerdown', (e) => {
+  const coords = getCanvasCoords(canvasB, e);
+  checkClick(coords.x, coords.y);
+});
+
+// Nút gợi ý
+hintBtn.addEventListener('click', () => {
+  if (hintsLeft <= 0) {
+    alert("Bạn đã hết lượt gợi ý!");
+    return;
+  }
+  const unfound = levels[curLevel].differences.filter(d => !foundList.includes(d));
+  if (unfound.length > 0) {
+    hintsLeft--;
+    hintBtn.textContent = `💡 Gợi ý (${hintsLeft})`;
+    const target = unfound[0];
+    
+    // Nhấp nháy gợi ý
+    ctxA.save();
+    ctxB.save();
+    ctxA.strokeStyle = ctxB.strokeStyle = '#ffa502';
+    ctxA.lineWidth = ctxB.lineWidth = 3;
+    ctxA.strokeRect(target.x - target.r, target.y - target.r, target.r * 2, target.r * 2);
+    ctxB.strokeRect(target.x - target.r, target.y - target.r, target.r * 2, target.r * 2);
+    ctxA.restore();
+    ctxB.restore();
+
+    playSound(520, 0.15);
+  }
+});
+
+function showWin() {
+  playSound(523, 0.15);
+  setTimeout(() => playSound(659, 0.15), 150);
+  setTimeout(() => playSound(784, 0.25), 300);
+
+  if (curLevel + 1 < levels.length) {
+    winMsg.textContent = "Bạn đã hoàn thành màn này xuất sắc!";
+    btnNext.textContent = "Sang Màn Kế Tiếp ➔";
+    btnNext.onclick = () => { loadLevel(curLevel + 1); };
+  } else {
+    winMsg.textContent = "🏆 CHÚC MỪNG BẠN ĐÃ PHÁ ĐẢO TOÀN BỘ TRÒ CHƠI!";
+    btnNext.textContent = "Chơi Lại Từ Đầu ↺";
+    btnNext.onclick = () => { loadLevel(0); };
+  }
+  winModal.style.display = 'block';
+}
+
+// Bộ đếm thời gian
+function startTimer() {
+  seconds = 0;
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// Khởi chạy
+loadLevel(0);
+startTimer();
 </script>
 </body>
 </html>
