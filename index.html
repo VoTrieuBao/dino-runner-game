@@ -31,10 +31,31 @@
     max-width: 400px;
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
-    font-size: 16px;
+    margin-bottom: 8px;
+    font-size: 15px;
     font-weight: bold;
     color: #00ff88;
+  }
+  .speed-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .speed-btn {
+    padding: 4px 10px;
+    background: #2a2a2a;
+    color: #888;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .speed-btn.active {
+    background: #00ff88;
+    color: #111;
+    font-weight: bold;
+    border-color: #00ff88;
   }
   canvas {
     background-color: #0f1410;
@@ -49,7 +70,6 @@
     font-size: 13px;
     color: #888;
   }
-  /* Phím điều hướng cho điện thoại */
   .d-pad {
     display: none;
     margin-top: 14px;
@@ -91,6 +111,13 @@
     <span id="score-text">ĐIỂM: 0</span>
     <span id="hi-text">KỶ LỤC: 0</span>
   </div>
+
+  <!-- Bộ chọn tốc độ -->
+  <div class="speed-selector">
+    <button class="speed-btn" data-speed="100">Bình thường</button>
+    <button class="speed-btn active" data-speed="70">⚡ Nhanh</button>
+    <button class="speed-btn" data-speed="48">🔥 Siêu tốc</button>
+  </div>
   
   <canvas id="gameCanvas" width="400" height="400" tabindex="0"></canvas>
   
@@ -111,13 +138,13 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreText = document.getElementById('score-text');
 const hiText = document.getElementById('hi-text');
+const speedBtns = document.querySelectorAll('.speed-btn');
 
-// Tự động nhận diện bàn phím ngay lập tức
 window.addEventListener('load', () => { window.focus(); document.body.focus(); });
 window.addEventListener('mouseenter', () => window.focus());
 document.addEventListener('click', () => window.focus());
 
-// Âm thanh 8-bit Web Audio
+// Audio
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function initAudio() {
@@ -140,10 +167,11 @@ function playTone(freq, type, duration) {
   } catch (e) {}
 }
 
-// Cấu hình trò chơi
-const GRID_SIZE = 20; // 20x20 ô (mỗi ô 20px)
+const GRID_SIZE = 20;
 const CELL_COUNT = canvas.width / GRID_SIZE;
 
+let baseSpeed = 70; // Mặc định chế độ "Nhanh" (70ms mỗi ô)
+let currentSpeed = baseSpeed;
 let snake = [];
 let dir = { x: 1, y: 0 };
 let nextDir = { x: 1, y: 0 };
@@ -154,10 +182,21 @@ let score = 0;
 let highScore = localStorage.getItem('snake_hi') || 0;
 let isGameOver = false;
 let isStarted = false;
-let gameSpeed = 120; // ms mỗi frame bước đi
 let lastUpdateTime = 0;
 
 hiText.textContent = `KỶ LỤC: ${highScore}`;
+
+// Lựa chọn tốc độ
+speedBtns.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    speedBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    baseSpeed = parseInt(btn.dataset.speed);
+    currentSpeed = baseSpeed;
+    btn.blur();
+    window.focus();
+  });
+});
 
 function resetGame() {
   snake = [
@@ -168,7 +207,7 @@ function resetGame() {
   dir = { x: 1, y: 0 };
   nextDir = { x: 1, y: 0 };
   score = 0;
-  gameSpeed = 120;
+  currentSpeed = baseSpeed;
   isGameOver = false;
   isStarted = true;
   bonusFood = null;
@@ -186,7 +225,6 @@ function spawnFood() {
     valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
   }
 
-  // 25% cơ hội xuất hiện mồi vàng thưởng lớn
   if (!bonusFood && Math.random() < 0.25 && score > 30) {
     let bValid = false;
     let bPos;
@@ -198,18 +236,16 @@ function spawnFood() {
       bValid = !snake.some(s => s.x === bPos.x && s.y === bPos.y) && (bPos.x !== food.x || bPos.y !== food.y);
     }
     bonusFood = bPos;
-    bonusTimer = 45; // tồn tại trong 45 lượt đi
+    bonusTimer = 45;
   }
 }
 
-// Điều khiển phím
 function changeDirection(dx, dy) {
   initAudio();
   if (!isStarted || isGameOver) {
     resetGame();
     return;
   }
-  // Không cho phép quay đầu 180 độ
   if (dx !== -dir.x && dy !== -dir.y) {
     nextDir = { x: dx, y: dy };
   }
@@ -223,7 +259,6 @@ window.addEventListener('keydown', (e) => {
   else if (e.code === 'Space' && (!isStarted || isGameOver)) { e.preventDefault(); resetGame(); }
 }, { passive: false });
 
-// Nút bấm trên điện thoại
 document.getElementById('btn-up').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, -1); });
 document.getElementById('btn-down').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(0, 1); });
 document.getElementById('btn-left').addEventListener('pointerdown', (e) => { e.preventDefault(); changeDirection(-1, 0); });
@@ -239,13 +274,11 @@ function update() {
   dir = nextDir;
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-  // Đâm vào tường
   if (head.x < 0 || head.x >= CELL_COUNT || head.y < 0 || head.y >= CELL_COUNT) {
     triggerGameOver();
     return;
   }
 
-  // Tự cắn vào thân
   if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
     triggerGameOver();
     return;
@@ -253,25 +286,22 @@ function update() {
 
   snake.unshift(head);
 
-  // Ăn mồi thường
   if (head.x === food.x && head.y === food.y) {
     score += 10;
     scoreText.textContent = `ĐIỂM: ${score}`;
     playTone(600, 'square', 0.08);
-    // Tăng tốc dần theo điểm
-    if (gameSpeed > 60) gameSpeed -= 1.5;
+    // Càng ăn càng tăng tốc độ tối đa xuống tới 35ms/bước
+    if (currentSpeed > 35) currentSpeed -= 1.2;
     spawnFood();
   } else if (bonusFood && head.x === bonusFood.x && head.y === bonusFood.y) {
-    // Ăn mồi vàng
     score += 35;
     scoreText.textContent = `ĐIỂM: ${score}`;
     playTone(900, 'square', 0.15);
     bonusFood = null;
   } else {
-    snake.pop(); // Di chuyển bình thường
+    snake.pop();
   }
 
-  // Giảm thời gian tồn tại của mồi vàng
   if (bonusFood) {
     bonusTimer--;
     if (bonusTimer <= 0) bonusFood = null;
@@ -291,7 +321,7 @@ function triggerGameOver() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Lưới nền mờ
+  // Lưới
   ctx.strokeStyle = '#141e17';
   ctx.lineWidth = 1;
   for (let i = 0; i <= canvas.width; i += GRID_SIZE) {
@@ -299,16 +329,15 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
   }
 
-  // 2. Mồi thường (Quả đỏ tròn có cuống)
+  // Mồi đỏ
   ctx.fillStyle = '#ff4757';
   ctx.beginPath();
   ctx.arc(food.x * GRID_SIZE + 10, food.y * GRID_SIZE + 10, 8, 0, Math.PI * 2);
   ctx.fill();
-  // Cuống mồi
   ctx.fillStyle = '#2ed573';
   ctx.fillRect(food.x * GRID_SIZE + 9, food.y * GRID_SIZE + 2, 2, 4);
 
-  // 3. Mồi vàng đặc biệt (Nhấp nháy khi sắp hết giờ)
+  // Mồi vàng
   if (bonusFood) {
     if (bonusTimer > 15 || Math.floor(bonusTimer / 2) % 2 === 0) {
       ctx.fillStyle = '#ffa502';
@@ -322,36 +351,31 @@ function draw() {
     }
   }
 
-  // 4. Thân rắn
+  // Thân rắn
   snake.forEach((segment, idx) => {
     if (idx === 0) {
-      // Đầu rắn
       ctx.fillStyle = '#00ff88';
       ctx.fillRect(segment.x * GRID_SIZE + 1, segment.y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
-      // Mắt rắn
       ctx.fillStyle = '#111';
-      const eyeOffset = 4;
-      if (dir.x === 1) { // Sang phải
+      if (dir.x === 1) {
         ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 4, 3, 3);
         ctx.fillRect(segment.x * GRID_SIZE + 12, segment.y * GRID_SIZE + 13, 3, 3);
-      } else if (dir.x === -1) { // Sang trái
+      } else if (dir.x === -1) {
         ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 4, 3, 3);
         ctx.fillRect(segment.x * GRID_SIZE + 5, segment.y * GRID_SIZE + 13, 3, 3);
-      } else if (dir.y === -1) { // Lên trên
+      } else if (dir.y === -1) {
         ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 5, 3, 3);
         ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 5, 3, 3);
-      } else { // Xuống dưới
+      } else {
         ctx.fillRect(segment.x * GRID_SIZE + 4, segment.y * GRID_SIZE + 12, 3, 3);
         ctx.fillRect(segment.x * GRID_SIZE + 13, segment.y * GRID_SIZE + 12, 3, 3);
       }
     } else {
-      // Các đốt thân
       ctx.fillStyle = idx % 2 === 0 ? '#10ac84' : '#1dd1a1';
       ctx.fillRect(segment.x * GRID_SIZE + 2, segment.y * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
     }
   });
 
-  // 5. Màn hình Bắt đầu / Thua cuộc
   if (!isStarted) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -361,7 +385,7 @@ function draw() {
     ctx.fillText('RẮN SĂN MỒI', canvas.width / 2, canvas.height / 2 - 20);
     ctx.font = '13px "Courier New", Courier, monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText('Nhấn Phím Mũi Tên bất kỳ để Chơi', canvas.width / 2, canvas.height / 2 + 15);
+    ctx.fillText('Nhấn Phím Mũi Tên để Chơi', canvas.width / 2, canvas.height / 2 + 15);
   } else if (isGameOver) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -378,7 +402,7 @@ function draw() {
 }
 
 function gameLoop(currentTime) {
-  if (currentTime - lastUpdateTime >= gameSpeed) {
+  if (currentTime - lastUpdateTime >= currentSpeed) {
     update();
     lastUpdateTime = currentTime;
   }
@@ -386,9 +410,8 @@ function gameLoop(currentTime) {
   requestAnimationFrame(gameLoop);
 }
 
-// Khởi tạo trạng thái ban đầu
 resetGame();
-isStarted = false; // Chờ người chơi bấm phím mới chạy
+isStarted = false;
 requestAnimationFrame(gameLoop);
 </script>
 </body>
